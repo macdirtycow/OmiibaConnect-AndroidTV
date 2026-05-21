@@ -53,6 +53,10 @@ class HeadphonesRepository(app: Application) {
         scope.launch {
             try {
                 requireNative()
+                BluetoothAccess.rfcommRejectReason(device)?.let { reason ->
+                    _state.value = UiState.Error(reason)
+                    return@launch
+                }
                 _state.value = UiState.Connecting
                 withTimeout(CONNECT_TIMEOUT_MS) {
                     HeadphonesNative.nativeConnect(device.name ?: device.address, device.address)

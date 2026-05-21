@@ -141,18 +141,28 @@ class TvDiagnosticsActivity : FragmentActivity() {
             }
             return
         }
-        if (scan.sonyDevices.isNotEmpty()) {
-            line("Sony koptelefoon(s) gevonden: ${scan.sonyDevices.size}")
-            scan.sonyDevices.forEach { device ->
+        if (scan.sonyClassic.isNotEmpty()) {
+            line("Sony Classic (gebruik deze): ${scan.sonyClassic.size}")
+            scan.sonyClassic.forEach { device ->
                 line("  • ${BluetoothAccess.deviceLabel(device)}")
             }
-        } else if (scan.otherBonded.isNotEmpty()) {
-            line("Geen Sony-naam herkend, wel gekoppeld:")
+        }
+        if (scan.sonyLeOnly.isNotEmpty()) {
+            line("Sony LE (niet gebruiken voor Omiiba): ${scan.sonyLeOnly.size}")
+            scan.sonyLeOnly.forEach { device ->
+                line("  • ${BluetoothAccess.deviceLabel(device)}")
+            }
+        }
+        if (scan.error != null) {
+            line("Let op: ${scan.error}")
+        }
+        if (scan.sonyClassic.isEmpty() && scan.otherBonded.isNotEmpty()) {
+            line("Geen Sony Classic, wel andere apparaten:")
             scan.otherBonded.forEach { device ->
                 line("  • ${BluetoothAccess.deviceLabel(device)}")
             }
-            line("  (Deze kun je ook in de app kiezen.)")
-        } else {
+        }
+        if (scan.sonyClassic.isEmpty() && scan.sonyLeOnly.isEmpty() && scan.otherBonded.isEmpty()) {
             line("Geen gekoppelde BT-apparaten zichtbaar voor de app.")
             line("  Koppel WH-1000XM3 in TV Instellingen → Bluetooth.")
             line("  Daarna opnieuw Bluetooth toestaan hier.")

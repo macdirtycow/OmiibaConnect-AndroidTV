@@ -45,13 +45,57 @@ object BluetoothAccess {
     }
 
     /**
-     * Bonded + currently connected audio devices (A2DP). Requires BLUETOOTH_CONNECT on API 31+.
+     * Sony MDR protocol needs Bluetooth Classic RFCOMM — not the LE (Low Energy) sideband entry.
+     * TVs often list only "LE-WH-1000XM3"; connecting to that hangs until timeout.
+     */
+    fun isLeOnlyAccessory(device: BluetoothDevice): Boolean {
+        val name = device.name?.trim().orEmpty().uppercase()
+        if (name.startsWith("LE-") || name.startsWith("LE_") || name.contains(" LOW ENERGY")) {
+            return true
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            if (device.type == BluetoothDevice.DEVICE_TYPE_LE) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun isRfcommCandidate(device: BluetoothDevice): Boolean {
+        if (isLeOnlyAccessory(device)) {
+            return false
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            return when (device.type) {
+                BluetoothDevice.DEVICE_TYPE_CLASSIC,
+                BluetoothDevice.DEVICE_TYPE_DUAL,
+                BluetoothDevice.DEVICE_TYPE_UNKNOWN,
+                -> true
+                BluetoothDevice.DEVICE_TYPE_LE -> false
+                else -> true
+            }
+        }
+        return true
+    }
+
+    fun rfcommRejectReason(device: BluetoothDevice): String? {
+        if (!isLeOnlyAccessory(device)) {
+            return null
+        }
+        return "“${device.name}” is een LE (Low Energy) koppeling. " +
+            "Omiiba heeft Classic Bluetooth (WH-1000XM3 zonder LE-). " +
+            "Koppel opnieuw in TV-instellingen → Bluetooth voor audio/classic."
+    }
+
+    /**
+     * Bonded + A2DP-connected devices. Requires BLUETOOTH_CONNECT on API 31+.
      */
     fun findHeadphones(context: Context): HeadphoneScan {
         if (!hasRuntimePermissions(context)) {
             return HeadphoneScan(
                 permissionGranted = false,
-                sonyDevices = emptyList(),
+                sonyClassic = emptyList(),
+                sonyLeOnly = emptyList(),
                 otherBonded = emptyList(),
                 error = "Bluetooth-rechten ontbreken. Geef CONNECT + SCAN toe.",
             )
@@ -76,22 +120,35 @@ object BluetoothAccess {
                     merged[device.address] = device
                 }
             } catch (_: SecurityException) {
-                // bonded list may still work
             }
 
             val all = merged.values.toList()
-            val sony = all.filter { isSonyHeadphone(it) }.sortedBy { it.name ?: it.address }
-            val other = all.filter { !isSonyHeadphone(it) }.sortedBy { it.name ?: it.address }
+            val sony = all.filter { isSonyHeadphone(it) }
+            val sonyClassic = sony.filter { isRfcommCandidate(it) }.sortedBy { it.name ?: it.address }
+            val sonyLeOnly = sony.filter { isLeOnlyAccessory(it) }.sortedBy { it.name ?: it.address }
+            val other = all.filter { !isSonyHeadphone(it) && isRfcommCandidate(it) }
+                .sortedBy { it.name ?: it.address }
+
+            val error = when {
+                sonyClassic.isNotEmpty() -> null
+                sonyLeOnly.isNotEmpty() ->
+                    "Alleen LE-WH-1000XM3 gevonden. Die werkt niet met Omiiba (RFCOMM). " +
+                        "Ontkoppel LE in TV Bluetooth en koppel opnieuw voor audio — zoek WH-1000XM3 zonder LE-."
+                else -> null
+            }
+
             HeadphoneScan(
                 permissionGranted = true,
-                sonyDevices = sony,
+                sonyClassic = sonyClassic,
+                sonyLeOnly = sonyLeOnly,
                 otherBonded = other,
-                error = null,
+                error = error,
             )
         } catch (sec: SecurityException) {
             HeadphoneScan(
                 permissionGranted = false,
-                sonyDevices = emptyList(),
+                sonyClassic = emptyList(),
+                sonyLeOnly = emptyList(),
                 otherBonded = emptyList(),
                 error = "Geen toegang tot gekoppelde apparaten: ${sec.message}",
             )
@@ -100,10 +157,11 @@ object BluetoothAccess {
 
     fun deviceLabel(device: BluetoothDevice): String {
         val name = device.name?.trim()
+        val suffix = if (isLeOnlyAccessory(device)) " [LE — niet gebruiken]" else ""
         return if (!name.isNullOrEmpty()) {
-            "$name (${device.address})"
+            "$name (${device.address})$suffix"
         } else {
-            device.address
+            device.address + suffix
         }
     }
 
@@ -126,17 +184,21 @@ object BluetoothAccess {
 
     data class HeadphoneScan(
         val permissionGranted: Boolean,
-        val sonyDevices: List<BluetoothDevice>,
+        /** Classic / dual — safe for RFCOMM (WH-1000XM3 without LE- prefix). */
+        val sonyClassic: List<BluetoothDevice>,
+        /** LE sideband only — must not be used for MDR protocol. */
+        val sonyLeOnly: List<BluetoothDevice>,
         val otherBonded: List<BluetoothDevice>,
         val error: String?,
     ) {
         val preferredDevices: List<BluetoothDevice>
-            get() = sonyDevices.ifEmpty { otherBonded }
+            get() = sonyClassic.ifEmpty { otherBonded }
 
         companion object {
             fun error(message: String) = HeadphoneScan(
                 permissionGranted = false,
-                sonyDevices = emptyList(),
+                sonyClassic = emptyList(),
+                sonyLeOnly = emptyList(),
                 otherBonded = emptyList(),
                 error = message,
             )

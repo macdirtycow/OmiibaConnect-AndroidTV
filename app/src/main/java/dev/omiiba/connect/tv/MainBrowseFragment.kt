@@ -165,11 +165,14 @@ class MainBrowseFragment : BrowseSupportFragment() {
         }
         val devices = scan.preferredDevices
         if (devices.isEmpty()) {
-            buildMessageRow(getString(R.string.no_paired_devices))
+            buildMessageRow(scan.error ?: getString(R.string.bt_le_only_found))
             return
         }
         val rowAdapter = itemRow()
-        if (scan.sonyDevices.isEmpty() && scan.otherBonded.isNotEmpty()) {
+        if (scan.sonyLeOnly.isNotEmpty()) {
+            rowAdapter.add(BrowseRowItem(getString(R.string.bt_le_listed_skip)))
+        }
+        if (scan.sonyClassic.isEmpty() && scan.otherBonded.isNotEmpty()) {
             rowAdapter.add(BrowseRowItem(getString(R.string.bt_pick_any_headphone)))
         }
         devices.forEach { device ->

@@ -17,6 +17,8 @@
     <string name="bt_permission_needed">Bluetooth-rechten nodig. Kies hieronder \"Bluetooth toestaan\" of ga terug naar het diagnose-scherm.</string>
     <string name="bt_permission_denied">Bluetooth-rechten geweigerd. Sta CONNECT en SCAN toe in app-instellingen.</string>
     <string name="bt_pick_any_headphone">Geen Sony-naam herkend — kies je gekoppelde koptelefoon:</string>
+    <string name="bt_le_listed_skip">LE-WH-1000XM3 werkt niet — koppel Classic WH-1000XM3 in TV Bluetooth</string>
+    <string name="bt_le_only_found">Alleen LE-WH-1000XM3 zichtbaar. Omiiba gebruikt Classic Bluetooth (RFCOMM), niet LE. Ontkoppel LE in TV-instellingen en koppel opnieuw voor audio; zoek WH-1000XM3 zonder LE-.</string>
     <string name="diagnostics_grant_bluetooth">Bluetooth toestaan</string>
     <string name="diagnostics_open_main">Open Omiiba Connect (OK)</string>
     <string name="diagnostics_hint">Stap 1: Bluetooth toestaan. Stap 2: controleer of je XM3 hierboven staat. Stap 3: Open Omiiba Connect.</string>
