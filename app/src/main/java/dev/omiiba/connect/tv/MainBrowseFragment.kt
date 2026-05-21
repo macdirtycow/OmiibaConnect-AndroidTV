@@ -12,34 +12,63 @@ import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.lifecycle.lifecycleScope
 import dev.omiiba.connect.tv.native.DeviceState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainBrowseFragment : BrowseSupportFragment() {
-    private val repository by lazy { (requireActivity().application as OmiibaTvApplication).repository }
+    private var repository: HeadphonesRepository? = null
+    private var stateJob: Job? = null
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private var latest: DeviceState? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupUiElements()
+        buildDisconnectedRows()
+    }
+
+    override fun onDestroyView() {
+        stateJob?.cancel()
+        stateJob = null
+        super.onDestroyView()
+    }
+
+    private fun setupUiElements() {
         title = getString(R.string.app_name)
         headersState = HEADERS_ENABLED
+        isHeadersTransitionOnBackEnabled = true
         adapter = rowsAdapter
         brandColor = ContextCompat.getColor(requireContext(), R.color.omiiba_accent)
-
         onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
             handleClick(item)
         }
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        repository.startupError?.let { message ->
-            buildMessageRow(message)
+    /** Native/Bluetooth stack loads only when the user first interacts (not at cold start). */
+    private fun ensureRepository(): HeadphonesRepository? {
+        repository?.let { return it }
+        return try {
+            val repo = (requireActivity().application as OmiibaTvApplication).repository
+            repo.startupError?.let { message ->
+                buildMessageRow(message)
+                return null
+            }
+            repository = repo
+            observeRepositoryState(repo)
+            repo
+        } catch (t: Throwable) {
+            buildMessageRow(t.message ?: t.javaClass.simpleName)
+            null
+        }
+    }
+
+    private fun observeRepositoryState(repo: HeadphonesRepository) {
+        if (stateJob != null) {
             return
         }
-        viewLifecycleOwner.lifecycleScope.launch {
-            repository.state.collectLatest { state ->
+        stateJob = viewLifecycleOwner.lifecycleScope.launch {
+            repo.state.collectLatest { state ->
                 when (state) {
                     is HeadphonesRepository.UiState.Disconnected -> buildDisconnectedRows()
                     is HeadphonesRepository.UiState.Connecting -> buildMessageRow(getString(R.string.status_connecting))
@@ -54,46 +83,44 @@ class MainBrowseFragment : BrowseSupportFragment() {
                 }
             }
         }
-        buildDisconnectedRows()
     }
 
     private fun handleClick(item: Any) {
+        val repo = ensureRepository() ?: return
         when (item) {
             is ActionItem.Connect -> {
                 if (item.mac.isNotEmpty()) {
-                    val device = repository.bondedSonyDevices().firstOrNull { it.address == item.mac }
+                    val device = repo.bondedSonyDevices().firstOrNull { it.address == item.mac }
                     if (device != null) {
-                        repository.connect(device)
+                        repo.connect(device)
                     }
                 } else {
-                    showDevicePicker()
+                    showDevicePicker(repo)
                 }
             }
-            ActionItem.Disconnect -> repository.disconnect()
-            ActionItem.Refresh -> repository.refresh()
-            is ActionItem.AmbientToggle -> repository.setAmbient(!item.enabled, latest?.focusOnVoice == true, latest?.asmLevel ?: 0)
-            is ActionItem.AsmLevel -> repository.setAmbient(latest?.ambientEnabled == true, latest?.focusOnVoice == true, item.level)
-            is ActionItem.FocusOnVoice -> repository.setAmbient(latest?.ambientEnabled == true, !item.current, latest?.asmLevel ?: 0)
-            is ActionItem.Surround -> repository.setVpt(item.index)
-            is ActionItem.SoundPosition -> repository.setSoundPosition(item.preset)
-            is ActionItem.EqPreset -> repository.setEqPreset(item.preset)
-            is ActionItem.TouchSensor -> repository.setTouchSensor(!item.enabled)
-            is ActionItem.VoiceGuidance -> repository.setVoiceGuidance(!item.enabled)
+            ActionItem.Disconnect -> repo.disconnect()
+            ActionItem.Refresh -> repo.refresh()
+            is ActionItem.AmbientToggle -> repo.setAmbient(!item.enabled, latest?.focusOnVoice == true, latest?.asmLevel ?: 0)
+            is ActionItem.AsmLevel -> repo.setAmbient(latest?.ambientEnabled == true, latest?.focusOnVoice == true, item.level)
+            is ActionItem.FocusOnVoice -> repo.setAmbient(latest?.ambientEnabled == true, !item.current, latest?.asmLevel ?: 0)
+            is ActionItem.Surround -> repo.setVpt(item.index)
+            is ActionItem.SoundPosition -> repo.setSoundPosition(item.preset)
+            is ActionItem.EqPreset -> repo.setEqPreset(item.preset)
+            is ActionItem.TouchSensor -> repo.setTouchSensor(!item.enabled)
+            is ActionItem.VoiceGuidance -> repo.setVoiceGuidance(!item.enabled)
         }
     }
 
-    private fun showDevicePicker() {
-        val devices = repository.bondedSonyDevices()
+    private fun showDevicePicker(repo: HeadphonesRepository) {
+        val devices = repo.bondedSonyDevices()
         if (devices.isEmpty()) {
             Toast.makeText(requireContext(), R.string.no_paired_devices, Toast.LENGTH_LONG).show()
             return
         }
-        val listAdapter = ArrayObjectAdapter(ListRowPresenter())
         val rowAdapter = ArrayObjectAdapter()
         devices.forEach { device ->
             rowAdapter.add(ActionItem.Connect(device.name ?: device.address, device.address))
         }
-        listAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), rowAdapter))
         rowsAdapter.clear()
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), rowAdapter))
     }

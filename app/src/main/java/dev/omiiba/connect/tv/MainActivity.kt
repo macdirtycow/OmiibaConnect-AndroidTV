@@ -5,24 +5,23 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.commit
+import androidx.fragment.app.FragmentActivity
 
-class MainActivity : AppCompatActivity(R.layout.activity_tv) {
+/**
+ * TV launcher activity — matches Android TV docs: setContentView + Leanback fragment in XML.
+ * @see <a href="https://developer.android.com/training/tv/playback/leanback/browse">Leanback browse</a>
+ */
+class MainActivity : FragmentActivity() {
 
     private val requestBluetooth = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
-    ) { /* granted in onResume / user can retry from Connect */ }
+    ) { /* user can retry Connect after granting */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_tv)
         requestBluetoothPermissionsIfNeeded()
-        if (savedInstanceState == null) {
-            supportFragmentManager.commit {
-                replace(R.id.main_container, MainBrowseFragment())
-            }
-        }
     }
 
     private fun requestBluetoothPermissionsIfNeeded() {

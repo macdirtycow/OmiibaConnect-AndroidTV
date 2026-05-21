@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Official Leanback pattern: host BrowseSupportFragment from XML, not commit(). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main_container"
+    android:id="@+id/main_frame"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black" />
+    android:background="@android:color/black">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/main_browse_fragment"
+        android:name="dev.omiiba.connect.tv.MainBrowseFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</FrameLayout>
