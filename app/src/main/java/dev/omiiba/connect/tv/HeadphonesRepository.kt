@@ -1,9 +1,8 @@
 package dev.omiiba.connect.tv
 
 import android.app.Application
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
+import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
 import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
 import dev.omiiba.connect.tv.native.DeviceState
 import dev.omiiba.connect.tv.native.HeadphonesNative
@@ -42,11 +41,12 @@ class HeadphonesRepository(app: Application) {
         check(startupError == null) { startupError ?: "Native layer unavailable" }
     }
 
+    fun scanHeadphones(): BluetoothAccess.HeadphoneScan =
+        BluetoothAccess.findHeadphones(appContext)
+
     fun bondedSonyDevices(): List<BluetoothDevice> {
-        val adapter = bluetoothAdapter() ?: return emptyList()
-        return adapter.bondedDevices
-            .filter { it.name?.contains("WH-1000X", ignoreCase = true) == true || it.name?.contains("Sony", ignoreCase = true) == true }
-            .sortedBy { it.name ?: it.address }
+        val scan = scanHeadphones()
+        return scan.preferredDevices
     }
 
     fun connect(device: BluetoothDevice) {
@@ -195,11 +195,6 @@ class HeadphonesRepository(app: Application) {
                 }
             }
         }
-    }
-
-    private fun bluetoothAdapter(): BluetoothAdapter? {
-        val manager = appContext.getSystemService(BluetoothManager::class.java) ?: return null
-        return manager.adapter
     }
 
     companion object {

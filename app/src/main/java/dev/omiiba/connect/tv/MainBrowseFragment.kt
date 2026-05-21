@@ -1,8 +1,10 @@
 package dev.omiiba.connect.tv
 
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
@@ -11,6 +13,7 @@ import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.lifecycle.lifecycleScope
+import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
 import dev.omiiba.connect.tv.native.DeviceState
 import dev.omiiba.connect.tv.ui.BrowseRowItem
 import dev.omiiba.connect.tv.ui.BrowseRowItemPresenter
@@ -23,6 +26,16 @@ class MainBrowseFragment : BrowseSupportFragment() {
     private var stateJob: Job? = null
     private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
     private var latest: DeviceState? = null
+
+    private val requestBluetooth = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        if (grants.values.all { it }) {
+            repository?.let { showDevicePicker(it) }
+        } else {
+            buildMessageRow(getString(R.string.bt_permission_denied))
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -104,9 +117,10 @@ class MainBrowseFragment : BrowseSupportFragment() {
                         repo.connect(device)
                     }
                 } else {
-                    showDevicePicker(repo)
+                    openDevicePicker(repo)
                 }
             }
+            ActionItem.GrantBluetooth -> requestBluetoothPermissions()
             ActionItem.Disconnect -> repo.disconnect()
             ActionItem.Refresh -> repo.refresh()
             is ActionItem.AmbientToggle -> repo.setAmbient(!item.enabled, latest?.focusOnVoice == true, latest?.asmLevel ?: 0)
@@ -120,15 +134,47 @@ class MainBrowseFragment : BrowseSupportFragment() {
         }
     }
 
+    private fun requestBluetoothPermissions() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            ensureRepository()?.let { showDevicePicker(it) }
+            return
+        }
+        if (BluetoothAccess.hasRuntimePermissions(requireContext())) {
+            ensureRepository()?.let { showDevicePicker(it) }
+            return
+        }
+        requestBluetooth.launch(BluetoothAccess.runtimePermissions)
+    }
+
+    private fun openDevicePicker(repo: HeadphonesRepository) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            !BluetoothAccess.hasRuntimePermissions(requireContext())
+        ) {
+            buildMessageRow(getString(R.string.bt_permission_needed))
+            requestBluetoothPermissions()
+            return
+        }
+        showDevicePicker(repo)
+    }
+
     private fun showDevicePicker(repo: HeadphonesRepository) {
-        val devices = repo.bondedSonyDevices()
+        val scan = repo.scanHeadphones()
+        if (!scan.permissionGranted || scan.error != null) {
+            buildMessageRow(scan.error ?: getString(R.string.bt_permission_needed))
+            return
+        }
+        val devices = scan.preferredDevices
         if (devices.isEmpty()) {
-            Toast.makeText(requireContext(), R.string.no_paired_devices, Toast.LENGTH_LONG).show()
+            buildMessageRow(getString(R.string.no_paired_devices))
             return
         }
         val rowAdapter = itemRow()
+        if (scan.sonyDevices.isEmpty() && scan.otherBonded.isNotEmpty()) {
+            rowAdapter.add(BrowseRowItem(getString(R.string.bt_pick_any_headphone)))
+        }
         devices.forEach { device ->
-            rowAdapter.add(BrowseRowItem(ActionItem.Connect(device.name ?: device.address, device.address)))
+            val label = BluetoothAccess.deviceLabel(device)
+            rowAdapter.add(BrowseRowItem(ActionItem.Connect(label, device.address)))
         }
         rowsAdapter.clear()
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), rowAdapter))
@@ -138,6 +184,11 @@ class MainBrowseFragment : BrowseSupportFragment() {
         rowsAdapter.clear()
         val row = itemRow()
         row.add(BrowseRowItem(ActionItem.Connect()))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            !BluetoothAccess.hasRuntimePermissions(requireContext())
+        ) {
+            row.add(BrowseRowItem(ActionItem.GrantBluetooth))
+        }
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), row))
     }
 
@@ -205,6 +256,9 @@ class MainBrowseFragment : BrowseSupportFragment() {
         }
         data object Disconnect : ActionItem { override fun toString() = "Disconnect" }
         data object Refresh : ActionItem { override fun toString() = "Refresh from headphones" }
+        data object GrantBluetooth : ActionItem {
+            override fun toString() = "Bluetooth toestaan (vereist)"
+        }
         data class AmbientToggle(val enabled: Boolean) : ActionItem {
             override fun toString() = if (enabled) "Turn ambient off" else "Turn ambient on"
         }

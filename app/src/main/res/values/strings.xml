@@ -13,7 +13,11 @@
     <string name="status_battery">Battery: %1$s</string>
     <string name="status_codec">Codec: %1$s</string>
     <string name="status_firmware">Firmware: %1$s</string>
-    <string name="no_paired_devices">No paired Sony headphones found. Pair in Android Bluetooth settings first.</string>
+    <string name="no_paired_devices">Geen koptelefoon zichtbaar. Koppel WH-1000XM3 in TV-instellingen → Bluetooth, geef daarna Bluetooth-rechten in de app.</string>
+    <string name="bt_permission_needed">Bluetooth-rechten nodig. Kies hieronder \"Bluetooth toestaan\" of ga terug naar het diagnose-scherm.</string>
+    <string name="bt_permission_denied">Bluetooth-rechten geweigerd. Sta CONNECT en SCAN toe in app-instellingen.</string>
+    <string name="bt_pick_any_headphone">Geen Sony-naam herkend — kies je gekoppelde koptelefoon:</string>
+    <string name="diagnostics_grant_bluetooth">Bluetooth toestaan</string>
     <string name="diagnostics_open_main">Open Omiiba Connect (OK)</string>
-    <string name="diagnostics_hint">Als alles OK is: selecteer de knop hieronder. Bij MISLUKT: maak een foto van dit scherm.</string>
+    <string name="diagnostics_hint">Stap 1: Bluetooth toestaan. Stap 2: controleer of je XM3 hierboven staat. Stap 3: Open Omiiba Connect.</string>
 </resources>
