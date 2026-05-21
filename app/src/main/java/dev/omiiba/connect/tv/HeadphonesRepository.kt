@@ -1,7 +1,9 @@
 package dev.omiiba.connect.tv
 
+import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
 import dev.omiiba.connect.tv.native.DeviceState
 import dev.omiiba.connect.tv.native.HeadphonesNative
@@ -17,8 +19,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
-class HeadphonesRepository {
-    private val transport = BluetoothRfcommTransport()
+class HeadphonesRepository(app: Application) {
+    private val appContext = app.applicationContext
+    private val transport = BluetoothRfcommTransport(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var keepaliveJob: Job? = null
 
@@ -40,7 +43,7 @@ class HeadphonesRepository {
     }
 
     fun bondedSonyDevices(): List<BluetoothDevice> {
-        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
+        val adapter = bluetoothAdapter() ?: return emptyList()
         return adapter.bondedDevices
             .filter { it.name?.contains("WH-1000X", ignoreCase = true) == true || it.name?.contains("Sony", ignoreCase = true) == true }
             .sortedBy { it.name ?: it.address }
@@ -192,6 +195,11 @@ class HeadphonesRepository {
                 }
             }
         }
+    }
+
+    private fun bluetoothAdapter(): BluetoothAdapter? {
+        val manager = appContext.getSystemService(BluetoothManager::class.java) ?: return null
+        return manager.adapter
     }
 
     companion object {

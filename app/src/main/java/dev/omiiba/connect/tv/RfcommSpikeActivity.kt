@@ -1,7 +1,7 @@
 package dev.omiiba.connect.tv
 
 import android.app.Activity
-import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 class RfcommSpikeActivity : Activity() {
     private val scope = CoroutineScope(Dispatchers.Main)
     private val logView by lazy { TextView(this) }
-    private val transport = BluetoothRfcommTransport()
+    private val transport = BluetoothRfcommTransport(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +48,8 @@ class RfcommSpikeActivity : Activity() {
     private fun runSpike() {
         scope.launch {
             val devices = withContext(Dispatchers.IO) {
-                BluetoothAdapter.getDefaultAdapter()?.bondedDevices?.toList() ?: emptyList()
+                getSystemService(BluetoothManager::class.java)?.adapter?.bondedDevices?.toList()
+                    ?: emptyList()
             }
             val target = devices.firstOrNull {
                 it.name?.contains("WH-1000X", true) == true

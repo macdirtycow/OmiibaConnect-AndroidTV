@@ -6,7 +6,6 @@ constexpr unsigned char ESCAPED_BYTE_SENTRY = 61;
 constexpr unsigned char ESCAPED_60 = 44;
 constexpr unsigned char ESCAPED_61 = 45;
 constexpr unsigned char ESCAPED_62 = 46;
-constexpr int DEFAULT_ASM_MAX_LEVEL = 19;
 
 namespace CommandSerializer
 {

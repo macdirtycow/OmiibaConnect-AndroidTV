@@ -97,18 +97,20 @@ public:
 	void snapshotVirtualSoundFromDevice();
 	void updateAmbientCurrentFromDevice();
 private:
-	Property<bool> _ambientSoundControl = { 0 };
-	Property<bool> _focusOnVoice = { 0 };
-	Property<int> _asmLevel = { 0 };
-	Property<SOUND_POSITION_PRESET> _surroundPosition = { SOUND_POSITION_PRESET::OFF, SOUND_POSITION_PRESET::OFF };
-	Property<int> _vptType = { 0 };
-	Property<EQ_PRESET> _eqPreset = { EQ_PRESET::OFF };
-	Property<int> _eqBass = { 0 };
-	Property<std::array<int, EQ_BAND_COUNT>> _eqBands = { std::array<int, EQ_BAND_COUNT>{} };
+	Property<bool> _ambientSoundControl{false, false};
+	Property<bool> _focusOnVoice{false, false};
+	Property<int> _asmLevel{0, 0};
+	Property<SOUND_POSITION_PRESET> _surroundPosition{
+		SOUND_POSITION_PRESET::OFF,
+		SOUND_POSITION_PRESET::OFF};
+	Property<int> _vptType{0, 0};
+	Property<EQ_PRESET> _eqPreset{EQ_PRESET::OFF, EQ_PRESET::OFF};
+	Property<int> _eqBass{0, 0};
+	Property<std::array<int, EQ_BAND_COUNT>> _eqBands{{}, {}};
 	bool _eqUseBandPayload = false;
 	bool _eqApplyPending = false;
-	Property<bool> _touchSensorEnabled = { true };
-	Property<bool> _voiceGuidanceEnabled = { true };
+	Property<bool> _touchSensorEnabled{true, true};
+	Property<bool> _voiceGuidanceEnabled{true, true};
 	mutable std::mutex _propertyMtx;
 
 	DeviceStatus _deviceStatus;

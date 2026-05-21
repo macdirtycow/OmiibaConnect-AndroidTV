@@ -10,7 +10,6 @@
 #include <thread>
 
 namespace {
-constexpr const char* kLogTag = "OmiibaNative";
 std::mutex gSessionMtx;
 std::unique_ptr<BluetoothWrapper> gBt;
 std::unique_ptr<Headphones> gHeadphones;

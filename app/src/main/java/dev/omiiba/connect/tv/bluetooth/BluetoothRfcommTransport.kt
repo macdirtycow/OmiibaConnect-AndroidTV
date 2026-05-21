@@ -2,7 +2,9 @@ package dev.omiiba.connect.tv.bluetooth
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
+import android.content.Context
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
@@ -14,7 +16,8 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * RFCOMM transport for Sony MDR protocol (same UUID as Sound Connect / Omiiba Mac).
  */
-class BluetoothRfcommTransport {
+class BluetoothRfcommTransport(context: Context) {
+    private val appContext = context.applicationContext
     private val connected = AtomicBoolean(false)
     private var socket: BluetoothSocket? = null
     private var readThread: Thread? = null
@@ -22,7 +25,7 @@ class BluetoothRfcommTransport {
 
     fun connect(mac: String) {
         disconnect()
-        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val adapter = bluetoothAdapter()
             ?: throw IOException("Bluetooth not available on this device")
         val device: BluetoothDevice = adapter.getRemoteDevice(mac)
         val uuid = UUID.fromString(SONY_MDR_UUID)
@@ -79,21 +82,9 @@ class BluetoothRfcommTransport {
         // Read thread continuously feeds inbound; nothing extra required on Android.
     }
 
-    private fun readLoop(sock: BluetoothSocket) {
-        val input = sock.inputStream
-        val buffer = ByteArray(512)
-        try {
-            while (connected.get() && !Thread.currentThread().isInterrupted) {
-                val read = input.read(buffer)
-                if (read <= 0) {
-                    break
-                }
-                inbound.offer(buffer.copyOf(read))
-            }
-        } catch (_: IOException) {
-        } finally {
-            connected.set(false)
-        }
+    private fun bluetoothAdapter(): BluetoothAdapter? {
+        val manager = appContext.getSystemService(BluetoothManager::class.java) ?: return null
+        return manager.adapter
     }
 
     private fun connectWithTimeout(sock: BluetoothSocket, timeoutMs: Long) {
@@ -118,6 +109,23 @@ class BluetoothRfcommTransport {
         error.get()?.let { throw it }
         if (!sock.isConnected) {
             throw IOException("RFCOMM connect failed (socket not connected)")
+        }
+    }
+
+    private fun readLoop(sock: BluetoothSocket) {
+        val input = sock.inputStream
+        val buffer = ByteArray(512)
+        try {
+            while (connected.get() && !Thread.currentThread().isInterrupted) {
+                val read = input.read(buffer)
+                if (read <= 0) {
+                    break
+                }
+                inbound.offer(buffer.copyOf(read))
+            }
+        } catch (_: IOException) {
+        } finally {
+            connected.set(false)
         }
     }
 

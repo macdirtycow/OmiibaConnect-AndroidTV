@@ -6,13 +6,14 @@ plugins {
 android {
     namespace = "dev.omiiba.connect.tv"
     compileSdk = 34
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
         applicationId = "dev.omiiba.connect.tv"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.1.3-pre"
+        versionCode = 5
+        versionName = "0.1.4-pre"
     }
 
     buildTypes {
