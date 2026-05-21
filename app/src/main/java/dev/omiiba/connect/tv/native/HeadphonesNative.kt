@@ -3,8 +3,25 @@ package dev.omiiba.connect.tv.native
 import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
 
 object HeadphonesNative {
-    init {
-        System.loadLibrary("omiiba_core")
+    @Volatile
+    private var libraryLoaded = false
+
+    private fun ensureLibrary() {
+        if (!libraryLoaded) {
+            System.loadLibrary("omiiba_core")
+            libraryLoaded = true
+        }
+    }
+
+    /** @return error message, or null on success */
+    fun safeBind(transport: BluetoothRfcommTransport): String? {
+        return try {
+            ensureLibrary()
+            nativeBindTransport(transport)
+            null
+        } catch (t: Throwable) {
+            t.message ?: t.javaClass.simpleName
+        }
     }
 
     external fun nativeBindTransport(transport: BluetoothRfcommTransport)

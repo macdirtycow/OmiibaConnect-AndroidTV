@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.OmiibaTv" parent="Theme.Leanback">
+    <style name="Theme.OmiibaTv" parent="Theme.Leanback.Browse">
         <item name="android:colorPrimary">@color/omiiba_accent</item>
         <item name="android:windowBackground">@android:color/black</item>
     </style>

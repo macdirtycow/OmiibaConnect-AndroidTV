@@ -25,8 +25,18 @@ class HeadphonesRepository {
     private val _state = MutableStateFlow<UiState>(UiState.Disconnected)
     val state: StateFlow<UiState> = _state
 
+    /** Non-null when native library or JNI bind failed at startup. */
+    val startupError: String?
+
     init {
-        HeadphonesNative.nativeBindTransport(transport)
+        startupError = HeadphonesNative.safeBind(transport)
+        if (startupError != null) {
+            _state.value = UiState.Error(startupError)
+        }
+    }
+
+    private fun requireNative() {
+        check(startupError == null) { startupError ?: "Native layer unavailable" }
     }
 
     fun bondedSonyDevices(): List<BluetoothDevice> {
@@ -39,6 +49,7 @@ class HeadphonesRepository {
     fun connect(device: BluetoothDevice) {
         scope.launch {
             try {
+                requireNative()
                 _state.value = UiState.Connecting
                 withTimeout(CONNECT_TIMEOUT_MS) {
                     HeadphonesNative.nativeConnect(device.name ?: device.address, device.address)
@@ -81,6 +92,7 @@ class HeadphonesRepository {
     }
 
     private suspend fun applyPendingInternal() {
+        requireNative()
         HeadphonesNative.nativePrepareForControl()
         HeadphonesNative.nativeApplyPending()
         refreshState()

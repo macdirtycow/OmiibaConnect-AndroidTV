@@ -25,7 +25,7 @@ class RfcommSpikeActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        HeadphonesNative.nativeBindTransport(transport)
+        HeadphonesNative.safeBind(transport)
 
         val runButton = Button(this).apply {
             text = "Run RFCOMM + handshake test"
@@ -60,6 +60,8 @@ class RfcommSpikeActivity : Activity() {
             append("Device: ${target.name} ${target.address}\n")
             try {
                 withContext(Dispatchers.IO) {
+                    val bindErr = HeadphonesNative.safeBind(transport)
+                    if (bindErr != null) throw IllegalStateException(bindErr)
                     HeadphonesNative.nativeConnect(target.name ?: "Sony", target.address)
                     val ok = HeadphonesNative.nativeProbe()
                     append("Probe: $ok\n")

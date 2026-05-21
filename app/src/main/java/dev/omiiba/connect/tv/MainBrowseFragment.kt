@@ -1,6 +1,7 @@
 package dev.omiiba.connect.tv
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.leanback.app.BrowseSupportFragment
@@ -29,7 +30,14 @@ class MainBrowseFragment : BrowseSupportFragment() {
         onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
             handleClick(item)
         }
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        repository.startupError?.let { message ->
+            buildMessageRow(message)
+            return
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             repository.state.collectLatest { state ->
                 when (state) {

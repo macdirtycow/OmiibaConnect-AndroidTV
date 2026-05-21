@@ -20,7 +20,7 @@ Pre-release (`0.1.2-pre`). Requires a TV that supports **Bluetooth Classic RFCOM
 
 ## Download
 
-Pre-release **release APK** (sideload): [GitHub Releases v0.1.1-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.1-pre).
+Pre-release **release APK** (sideload): [GitHub Releases v0.1.2-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.2-pre).
 
 ## Build
 
