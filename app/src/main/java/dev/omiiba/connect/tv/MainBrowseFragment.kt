@@ -12,6 +12,8 @@ import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.lifecycle.lifecycleScope
 import dev.omiiba.connect.tv.native.DeviceState
+import dev.omiiba.connect.tv.ui.BrowseRowItem
+import dev.omiiba.connect.tv.ui.BrowseRowItemPresenter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,9 +43,16 @@ class MainBrowseFragment : BrowseSupportFragment() {
         adapter = rowsAdapter
         brandColor = ContextCompat.getColor(requireContext(), R.color.omiiba_accent)
         onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
-            handleClick(item)
+            val action = (item as? BrowseRowItem)?.action
+            if (action != null) {
+                handleClick(action)
+            }
         }
     }
+
+    private fun itemRow(): ArrayObjectAdapter = ArrayObjectAdapter(BrowseRowItemPresenter())
+
+    private fun BrowseRowItem(action: ActionItem): BrowseRowItem = BrowseRowItem(action.toString(), action)
 
     /** Native/Bluetooth stack loads only when the user first interacts (not at cold start). */
     private fun ensureRepository(): HeadphonesRepository? {
@@ -117,9 +126,9 @@ class MainBrowseFragment : BrowseSupportFragment() {
             Toast.makeText(requireContext(), R.string.no_paired_devices, Toast.LENGTH_LONG).show()
             return
         }
-        val rowAdapter = ArrayObjectAdapter()
+        val rowAdapter = itemRow()
         devices.forEach { device ->
-            rowAdapter.add(ActionItem.Connect(device.name ?: device.address, device.address))
+            rowAdapter.add(BrowseRowItem(ActionItem.Connect(device.name ?: device.address, device.address)))
         }
         rowsAdapter.clear()
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), rowAdapter))
@@ -127,63 +136,63 @@ class MainBrowseFragment : BrowseSupportFragment() {
 
     private fun buildDisconnectedRows() {
         rowsAdapter.clear()
-        val row = ArrayObjectAdapter()
-        row.add(ActionItem.Connect())
+        val row = itemRow()
+        row.add(BrowseRowItem(ActionItem.Connect()))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_connect)), row))
     }
 
     private fun buildMessageRow(message: String) {
         rowsAdapter.clear()
-        val row = ArrayObjectAdapter()
-        row.add(message)
+        val row = itemRow()
+        row.add(BrowseRowItem(message))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_status)), row))
     }
 
     private fun buildConnectedRows(device: DeviceState) {
         rowsAdapter.clear()
 
-        val status = ArrayObjectAdapter()
-        status.add(getString(R.string.status_model, device.modelName))
-        status.add(getString(R.string.status_battery, if (device.batteryPercent >= 0) "${device.batteryPercent}%" else "—"))
-        status.add(getString(R.string.status_codec, device.codec))
-        status.add(getString(R.string.status_firmware, device.firmware))
-        status.add(ActionItem.Refresh)
-        status.add(ActionItem.Disconnect)
+        val status = itemRow()
+        status.add(BrowseRowItem(getString(R.string.status_model, device.modelName)))
+        status.add(BrowseRowItem(getString(R.string.status_battery, if (device.batteryPercent >= 0) "${device.batteryPercent}%" else "—")))
+        status.add(BrowseRowItem(getString(R.string.status_codec, device.codec)))
+        status.add(BrowseRowItem(getString(R.string.status_firmware, device.firmware)))
+        status.add(BrowseRowItem(ActionItem.Refresh))
+        status.add(BrowseRowItem(ActionItem.Disconnect))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_status)), status))
 
-        val ambient = ArrayObjectAdapter()
-        ambient.add(ActionItem.AmbientToggle(device.ambientEnabled))
-        ambient.add(ActionItem.FocusOnVoice(device.focusOnVoice))
+        val ambient = itemRow()
+        ambient.add(BrowseRowItem(ActionItem.AmbientToggle(device.ambientEnabled)))
+        ambient.add(BrowseRowItem(ActionItem.FocusOnVoice(device.focusOnVoice)))
         for (level in 0..device.asmMaxLevel) {
-            ambient.add(ActionItem.AsmLevel(level, level == device.asmLevel))
+            ambient.add(BrowseRowItem(ActionItem.AsmLevel(level, level == device.asmLevel)))
         }
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_ambient)), ambient))
 
         if (device.supportsVirtualSound) {
-            val virtual = ArrayObjectAdapter()
+            val virtual = itemRow()
             Presets.SURROUND.forEachIndexed { index, label ->
-                virtual.add(ActionItem.Surround(index, label, index == device.vptType))
+                virtual.add(BrowseRowItem(ActionItem.Surround(index, label, index == device.vptType)))
             }
             Presets.SOUND_POSITION.forEach { (preset, label) ->
-                virtual.add(ActionItem.SoundPosition(preset, label, preset == device.soundPosition))
+                virtual.add(BrowseRowItem(ActionItem.SoundPosition(preset, label, preset == device.soundPosition)))
             }
             rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_virtual_sound)), virtual))
         }
 
         if (device.supportsEqualizer) {
-            val eq = ArrayObjectAdapter()
+            val eq = itemRow()
             Presets.EQ.forEach { (preset, label) ->
-                eq.add(ActionItem.EqPreset(preset, label, preset == device.eqPreset))
+                eq.add(BrowseRowItem(ActionItem.EqPreset(preset, label, preset == device.eqPreset)))
             }
             rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_equalizer)), eq))
         }
 
-        val extra = ArrayObjectAdapter()
+        val extra = itemRow()
         if (device.supportsTouchSensor) {
-            extra.add(ActionItem.TouchSensor(device.touchSensorEnabled))
+            extra.add(BrowseRowItem(ActionItem.TouchSensor(device.touchSensorEnabled)))
         }
         if (device.supportsVoiceGuidance) {
-            extra.add(ActionItem.VoiceGuidance(device.voiceGuidanceEnabled))
+            extra.add(BrowseRowItem(ActionItem.VoiceGuidance(device.voiceGuidanceEnabled)))
         }
         if (extra.size() > 0) {
             rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_extra)), extra))

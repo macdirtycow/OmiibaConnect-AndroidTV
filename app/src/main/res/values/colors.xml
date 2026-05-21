@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="omiiba_accent">#FF4FC3F7</color>
+    <color name="tv_row_text">#FFFFFFFF</color>
 </resources>
