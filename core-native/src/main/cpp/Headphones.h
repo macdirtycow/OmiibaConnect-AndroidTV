@@ -25,11 +25,11 @@ public:
 	Headphones(BluetoothWrapper& conn);
 
 	void setAmbientSoundControl(bool val);
-	bool getAmbientSoundControl();
+	bool getAmbientSoundControl() const;
 
-	bool isFocusOnVoiceAvailable();
+	bool isFocusOnVoiceAvailable() const;
 	void setFocusOnVoice(bool val);
-	bool getFocusOnVoice();
+	bool getFocusOnVoice() const;
 
 	bool isSetAsmLevelAvailable();
 	void setAsmLevel(int val);

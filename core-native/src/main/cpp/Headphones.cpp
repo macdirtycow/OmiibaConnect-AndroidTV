@@ -18,12 +18,12 @@ void Headphones::setAmbientSoundControl(bool val)
 	this->_ambientSoundControl.desired = val;
 }
 
-bool Headphones::getAmbientSoundControl()
+bool Headphones::getAmbientSoundControl() const
 {
 	return this->_ambientSoundControl.current;
 }
 
-bool Headphones::isFocusOnVoiceAvailable()
+bool Headphones::isFocusOnVoiceAvailable() const
 {
 	return this->_ambientSoundControl.current && this->_asmLevel.current > MINIMUM_VOICE_FOCUS_STEP;
 }
@@ -34,7 +34,7 @@ void Headphones::setFocusOnVoice(bool val)
 	this->_focusOnVoice.desired = val;
 }
 
-bool Headphones::getFocusOnVoice()
+bool Headphones::getFocusOnVoice() const
 {
 	return this->_focusOnVoice.current;
 }
