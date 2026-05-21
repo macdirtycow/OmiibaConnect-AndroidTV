@@ -18,21 +18,25 @@ Pre-release (`0.1.0-pre`). Requires a TV that supports **Bluetooth Classic RFCOM
 - Battery, codec, firmware readout
 - Background keepalive + `prepareForControl` (Mac 2.5.x behaviour)
 
+## Download
+
+Pre-release **release APK** (sideload): [GitHub Releases v0.1.0-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.0-pre).
+
 ## Build
 
 ```bash
 cd omiiba-connect-android-tv
-./gradlew :app:assembleDebug
+./gradlew :app:assembleRelease
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+APK: `app/build/outputs/apk/release/app-release.apk`
 
 Requires Android SDK 34 and NDK (CMake builds `core-native`).
 
 ## Install on TV
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 Pair headphones in system Bluetooth settings first.

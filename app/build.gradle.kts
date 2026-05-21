@@ -17,6 +17,8 @@ android {
 
     buildTypes {
         release {
+            // Pre-release sideload: debug keystore (no Play Store signing secrets in CI).
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
