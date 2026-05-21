@@ -30,7 +30,7 @@ class MainBrowseFragment : BrowseSupportFragment() {
             handleClick(item)
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             repository.state.collectLatest { state ->
                 when (state) {
                     is HeadphonesRepository.UiState.Disconnected -> buildDisconnectedRows()

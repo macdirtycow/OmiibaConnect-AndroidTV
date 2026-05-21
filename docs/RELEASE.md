@@ -12,7 +12,7 @@ Release builds use the **debug keystore** for sideload pre-releases (no Play Sto
 
 ## Download from GitHub
 
-Pre-release APK: [v0.1.1-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.1-pre) (`app-release.apk`).
+Pre-release APK: [v0.1.2-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.2-pre) (`app-release.apk`).
 
 CI builds on every push to `main` and refreshes that asset.
 

@@ -2,5 +2,6 @@
 <resources>
     <style name="Theme.OmiibaTv" parent="Theme.Leanback">
         <item name="android:colorPrimary">@color/omiiba_accent</item>
+        <item name="android:windowBackground">@android:color/black</item>
     </style>
 </resources>

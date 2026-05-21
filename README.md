@@ -6,7 +6,7 @@ Unofficial **Android TV** companion for Sony WH-1000XM3 / XM4 / XM5 / XM6. Uses 
 
 ## Status
 
-Pre-release (`0.1.1-pre`). Requires a TV that supports **Bluetooth Classic RFCOMM** to the headphones. See [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
+Pre-release (`0.1.2-pre`). Requires a TV that supports **Bluetooth Classic RFCOMM** to the headphones. See [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
 
 ## Features
 
