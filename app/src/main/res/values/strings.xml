@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Omiiba Connect TV</string>
+    <string name="rfcomm_spike_title">RFCOMM spike</string>
+    <string name="row_connect">Connection</string>
+    <string name="row_status">Status</string>
+    <string name="row_ambient">Ambient sound</string>
+    <string name="row_virtual_sound">Virtual sound</string>
+    <string name="row_equalizer">Equalizer</string>
+    <string name="row_extra">More settings</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_model">Model: %1$s</string>
+    <string name="status_battery">Battery: %1$s</string>
+    <string name="status_codec">Codec: %1$s</string>
+    <string name="status_firmware">Firmware: %1$s</string>
+    <string name="no_paired_devices">No paired Sony headphones found. Pair in Android Bluetooth settings first.</string>
+</resources>
