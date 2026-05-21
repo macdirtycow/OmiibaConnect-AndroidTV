@@ -14,4 +14,6 @@
     <string name="status_codec">Codec: %1$s</string>
     <string name="status_firmware">Firmware: %1$s</string>
     <string name="no_paired_devices">No paired Sony headphones found. Pair in Android Bluetooth settings first.</string>
+    <string name="diagnostics_open_main">Open Omiiba Connect (OK)</string>
+    <string name="diagnostics_hint">Als alles OK is: selecteer de knop hieronder. Bij MISLUKT: maak een foto van dit scherm.</string>
 </resources>

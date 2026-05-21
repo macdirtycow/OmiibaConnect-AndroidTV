@@ -1,39 +1,62 @@
-# Android TV — app starten (officiële eisen)
+# Android TV — starten met alleen ADB
 
-Gebaseerd op [Create and run a TV app](https://developer.android.com/training/tv/get-started/create) en [Leanback browse](https://developer.android.com/training/tv/playback/leanback/browse).
+Je hebt geen logcat-viewer nodig op de TV zelf. Vanaf je Mac met `adb connect <tv-ip>` kun je alles uitlezen.
 
-## Vereisten in de app
+## 1. Diagnose-scherm op de TV (geen gissen)
 
-| Eis | Omiiba Connect |
-|-----|----------------|
-| `MAIN` + `LEANBACK_LAUNCHER` | Ja (beide categorieën op `MainActivity`) |
-| `android.software.leanback` | Ja (`required=false` voor bredere sideload) |
-| Touchscreen niet verplicht | Ja |
-| `android:banner` (320×180) | Ja |
-| `android:icon` | Ja |
-| Leanback-thema op TV-activity | `Theme.Leanback.Browse` |
-| `BrowseSupportFragment` in layout-XML | Ja (`FragmentContainerView`) |
-| Native/BT pas bij gebruik | Ja (geen load bij cold start) |
+Vanaf **v0.1.6-pre** opent de app eerst een **gewoon tekstscherm** (geen Leanback):
 
-## Installeren / starten op Google TV
+- Versie, Android-API, CPU-ABI
+- Test native bibliotheek (`omiiba_core`)
+- Bluetooth-rechten
+- Laatste crash (als die er was)
+
+**Maak een foto** van dat scherm als iets **MISLUKT** staat — dat is genoeg om te fixen.
+
+Daarna: knop **“Open Omiiba Connect (OK)”** → hoofdapp met Leanback-menu.
+
+## 2. Script op je Mac
+
+```bash
+cd omiiba-connect-android-tv
+export TV_IP=192.168.1.50   # IP van je TV
+chmod +x scripts/adb-tv-diagnose.sh
+./scripts/adb-tv-diagnose.sh
+```
+
+Met APK-pad:
+
+```bash
+./scripts/adb-tv-diagnose.sh app/build/outputs/apk/release/app-release.apk
+```
+
+## 3. Handmatige adb-commando’s
 
 ```bash
 adb connect <tv-ip>
 adb install -r app-release.apk
-adb shell am start -n dev.omiiba.connect.tv/.MainActivity
-```
 
-Als de app in het menu niet opent, controleer crash-log:
+# Diagnose (start altijd dit eerst)
+adb shell am start -n dev.omiiba.connect.tv/.TvDiagnosticsActivity
 
-```bash
+# Crash-bestand ophalen (debug-build)
+adb exec-out run-as dev.omiiba.connect.tv cat files/last_crash.txt
+
+# Logcat naar bestand op je Mac
 adb logcat -c
-adb shell am start -n dev.omiiba.connect.tv/.MainActivity
-adb logcat -d | grep -E "AndroidRuntime|FATAL|omiiba|Omiiba"
+adb shell am start -n dev.omiiba.connect.tv/.TvDiagnosticsActivity
+sleep 3
+adb logcat -d > tv-log.txt
+grep -E "FATAL|OmiibaCrash|AndroidRuntime" tv-log.txt
 ```
 
-## Veelvoorkomende oorzaken “opent niet”
+## 4. Officiële TV-eisen (samenvatting)
 
-1. **Crash bij start** — zie `FATAL EXCEPTION` in logcat (niet de Gradle compile-warnings).
-2. **Alleen LEANBACK_LAUNCHER** — sommige sideload-launchers verwachten ook `LAUNCHER` (nu toegevoegd).
-3. **Fragment via `commit()` i.p.v. XML** — Leanback-sample gebruikt `<fragment>` / `FragmentContainerView` (nu toegevoegd).
-4. **Native library bij open** — `System.loadLibrary` gebeurt pas bij eerste “Connect” (v0.1.5+).
+Zie [Create and run a TV app](https://developer.android.com/training/tv/get-started/create):
+
+- `LEANBACK_LAUNCHER` + `LAUNCHER`
+- `android:banner` + icoon
+- Leanback-thema voor het hoofdscherm
+- `BrowseSupportFragment` in layout-XML
+
+Diagnose-activity gebruikt bewust **geen** Leanback, zodat je ziet of het probleem in het hoofdmenu zit.

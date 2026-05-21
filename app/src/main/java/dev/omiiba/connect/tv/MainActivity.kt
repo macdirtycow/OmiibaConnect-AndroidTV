@@ -2,6 +2,7 @@ package dev.omiiba.connect.tv
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,9 +20,18 @@ class MainActivity : FragmentActivity() {
     ) { /* user can retry Connect after granting */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_tv)
-        requestBluetoothPermissionsIfNeeded()
+        try {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_tv)
+            requestBluetoothPermissionsIfNeeded()
+        } catch (t: Throwable) {
+            CrashReporter.save(this, t)
+            startActivity(
+                Intent(this, TvDiagnosticsActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            finish()
+        }
     }
 
     private fun requestBluetoothPermissionsIfNeeded() {

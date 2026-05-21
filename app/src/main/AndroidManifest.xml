@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- TV app: leanback optional=false keeps app TV-focused on Play; sideload still works on TV. -->
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />
@@ -29,6 +28,7 @@
         android:name=".OmiibaTvApplication"
         android:allowBackup="false"
         android:banner="@drawable/tv_banner"
+        android:debuggable="true"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -37,19 +37,26 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OmiibaTv">
 
-        <!-- TV launcher: LEANBACK_LAUNCHER + LAUNCHER (required for some launchers / adb). -->
+        <!-- Plain launcher: always visible on TV, shows on-screen diagnostics. -->
         <activity
-            android:name=".MainActivity"
+            android:name=".TvDiagnosticsActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.OmiibaTv">
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.OmiibaTv" />
 
         <activity
             android:name=".RfcommSpikeActivity"
