@@ -40,11 +40,13 @@ jobs:
         run: |
           APK=app/build/outputs/apk/release/app-release.apk
           NOTES="Pre-release for sideload on Android TV (Google TV, etc.). Pair Sony headphones in system Bluetooth first. See docs/android-tv-bluetooth.md and docs/RELEASE.md."
-          if gh release view v0.1.0-pre >/dev/null 2>&1; then
-            gh release upload v0.1.0-pre "$APK" --clobber
+          TAG=v0.1.1-pre
+          TITLE="Omiiba Connect TV 0.1.1 (pre-release)"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
           else
-            gh release create v0.1.0-pre "$APK" \
-              --title "Omiiba Connect TV 0.1.0 (pre-release)" \
+            gh release create "$TAG" "$APK" \
+              --title "$TITLE" \
               --prerelease \
               --notes "$NOTES"
           fi

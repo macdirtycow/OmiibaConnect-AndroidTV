@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class HeadphonesRepository {
     private val transport = BluetoothRfcommTransport()
@@ -39,11 +40,14 @@ class HeadphonesRepository {
         scope.launch {
             try {
                 _state.value = UiState.Connecting
-                HeadphonesNative.nativeConnect(device.name ?: device.address, device.address)
-                refreshState()
+                withTimeout(CONNECT_TIMEOUT_MS) {
+                    HeadphonesNative.nativeConnect(device.name ?: device.address, device.address)
+                    refreshState()
+                }
                 startKeepalive()
                 _state.value = UiState.Connected(requireState())
             } catch (exc: Exception) {
+                HeadphonesNative.nativeDisconnect()
                 _state.value = UiState.Error(exc.message ?: "Connect failed")
             }
         }
@@ -176,6 +180,11 @@ class HeadphonesRepository {
                 }
             }
         }
+    }
+
+    companion object {
+        /** RFCOMM + handshake budget (must exceed transport connect timeout). */
+        private const val CONNECT_TIMEOUT_MS = 45_000L
     }
 
     sealed interface UiState {

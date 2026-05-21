@@ -6,7 +6,7 @@ Unofficial **Android TV** companion for Sony WH-1000XM3 / XM4 / XM5 / XM6. Uses 
 
 ## Status
 
-Pre-release (`0.1.0-pre`). Requires a TV that supports **Bluetooth Classic RFCOMM** to the headphones. See [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
+Pre-release (`0.1.1-pre`). Requires a TV that supports **Bluetooth Classic RFCOMM** to the headphones. See [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
 
 ## Features
 
@@ -20,7 +20,7 @@ Pre-release (`0.1.0-pre`). Requires a TV that supports **Bluetooth Classic RFCOM
 
 ## Download
 
-Pre-release **release APK** (sideload): [GitHub Releases v0.1.0-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.0-pre).
+Pre-release **release APK** (sideload): [GitHub Releases v0.1.1-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.1-pre).
 
 ## Build
 

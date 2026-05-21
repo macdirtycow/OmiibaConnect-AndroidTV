@@ -6,8 +6,10 @@ import android.bluetooth.BluetoothSocket
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * RFCOMM transport for Sony MDR protocol (same UUID as Sound Connect / Omiiba Mac).
@@ -31,7 +33,7 @@ class BluetoothRfcommTransport {
             method.invoke(device, 1) as BluetoothSocket
         }
         adapter.cancelDiscovery()
-        sock.connect()
+        connectWithTimeout(sock, CONNECT_TIMEOUT_MS)
         socket = sock
         connected.set(true)
         inbound.clear()
@@ -94,8 +96,34 @@ class BluetoothRfcommTransport {
         }
     }
 
+    private fun connectWithTimeout(sock: BluetoothSocket, timeoutMs: Long) {
+        val error = AtomicReference<IOException?>(null)
+        val done = CountDownLatch(1)
+        val thread = Thread({
+            try {
+                sock.connect()
+            } catch (exc: IOException) {
+                error.set(exc)
+            } finally {
+                done.countDown()
+            }
+        }, "omiiba-bt-connect")
+        thread.isDaemon = true
+        thread.start()
+        if (!done.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+            thread.interrupt()
+            runCatching { sock.close() }
+            throw IOException("RFCOMM connect timed out (${timeoutMs / 1000}s). This TV may not support Sony MDR Bluetooth.")
+        }
+        error.get()?.let { throw it }
+        if (!sock.isConnected) {
+            throw IOException("RFCOMM connect failed (socket not connected)")
+        }
+    }
+
     companion object {
         const val SONY_MDR_UUID = "96CC203E-5068-46ad-B32D-E316F5E069BA"
-        private const val POLL_TIMEOUT_MS = 12_000L
+        private const val CONNECT_TIMEOUT_MS = 20_000L
+        private const val POLL_TIMEOUT_MS = 5_000L
     }
 }
