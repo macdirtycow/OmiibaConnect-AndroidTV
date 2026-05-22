@@ -54,19 +54,26 @@ class HeadphonesRepository(app: Application) {
             try {
                 requireNative()
                 BluetoothAccess.rfcommRejectReason(device)?.let { reason ->
+                    ConnectStatusStore.save(appContext, reason)
                     _state.value = UiState.Error(reason)
                     return@launch
                 }
+                val label = BluetoothAccess.safeName(device) ?: device.address
                 _state.value = UiState.Connecting
+                ConnectStatusStore.save(appContext, "Verbinden met $label…")
                 withTimeout(CONNECT_TIMEOUT_MS) {
-                    HeadphonesNative.nativeConnect(device.name ?: device.address, device.address)
+                    HeadphonesNative.nativeConnect(label, device.address)
                     refreshState()
                 }
                 startKeepalive()
-                _state.value = UiState.Connected(requireState())
-            } catch (exc: Exception) {
-                HeadphonesNative.nativeDisconnect()
-                _state.value = UiState.Error(exc.message ?: "Connect failed")
+                val connected = requireState()
+                ConnectStatusStore.save(appContext, "Verbonden met ${connected.modelName}")
+                _state.value = UiState.Connected(connected)
+            } catch (exc: Throwable) {
+                runCatching { HeadphonesNative.nativeDisconnect() }
+                val message = exc.message ?: exc.javaClass.simpleName
+                ConnectStatusStore.save(appContext, "Connect mislukt: $message")
+                _state.value = UiState.Error(message)
             }
         }
     }
@@ -203,7 +210,8 @@ class HeadphonesRepository(app: Application) {
 
     companion object {
         /** RFCOMM + handshake budget (must exceed transport connect timeout). */
-        private const val CONNECT_TIMEOUT_MS = 45_000L
+        /** RFCOMM multi-attempt + MDR handshake. */
+        private const val CONNECT_TIMEOUT_MS = 60_000L
     }
 
     sealed interface UiState {

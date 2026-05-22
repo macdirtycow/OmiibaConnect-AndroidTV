@@ -91,17 +91,27 @@ class MainBrowseFragment : BrowseSupportFragment() {
         }
         stateJob = viewLifecycleOwner.lifecycleScope.launch {
             repo.state.collectLatest { state ->
-                when (state) {
-                    is HeadphonesRepository.UiState.Disconnected -> buildDisconnectedRows()
-                    is HeadphonesRepository.UiState.Connecting -> buildMessageRow(getString(R.string.status_connecting))
-                    is HeadphonesRepository.UiState.Connected -> {
-                        latest = state.device
-                        buildConnectedRows(state.device)
+                if (!isAdded) {
+                    return@collectLatest
+                }
+                try {
+                    when (state) {
+                        is HeadphonesRepository.UiState.Disconnected -> buildDisconnectedRows()
+                        is HeadphonesRepository.UiState.Connecting -> buildMessageRow(getString(R.string.status_connecting))
+                        is HeadphonesRepository.UiState.Connected -> {
+                            latest = state.device
+                            buildConnectedRows(state.device)
+                        }
+                        is HeadphonesRepository.UiState.Error -> {
+                            if (isAdded) {
+                                Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                            }
+                            buildMessageRow(state.message)
+                        }
                     }
-                    is HeadphonesRepository.UiState.Error -> {
-                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
-                        buildMessageRow(state.message)
-                    }
+                } catch (t: Throwable) {
+                    CrashReporter.save(requireContext(), t)
+                    buildMessageRow("UI-fout: ${t.message ?: t.javaClass.simpleName}")
                 }
             }
         }
@@ -217,7 +227,8 @@ class MainBrowseFragment : BrowseSupportFragment() {
         val ambient = itemRow()
         ambient.add(BrowseRowItem(ActionItem.AmbientToggle(device.ambientEnabled)))
         ambient.add(BrowseRowItem(ActionItem.FocusOnVoice(device.focusOnVoice)))
-        for (level in 0..device.asmMaxLevel) {
+        val maxAsm = device.asmMaxLevel.coerceIn(0, 20)
+        for (level in 0..maxAsm) {
             ambient.add(BrowseRowItem(ActionItem.AsmLevel(level, level == device.asmLevel)))
         }
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_ambient)), ambient))

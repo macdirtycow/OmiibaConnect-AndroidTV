@@ -117,6 +117,13 @@ class TvDiagnosticsActivity : FragmentActivity() {
             testBluetooth()
             testLeanbackOnClasspath()
 
+            val lastConnect = ConnectStatusStore.read(this)
+            if (lastConnect.isNotBlank()) {
+                line("")
+                line("Laatste connect-poging:")
+                line(lastConnect.trim().take(600))
+            }
+
             val last = CrashReporter.readLast(this)
             if (last.isNotBlank()) {
                 line("")
