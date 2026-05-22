@@ -37,6 +37,10 @@ object CrashReporter {
         }.getOrElse { "" }
     }
 
+    fun clear(context: Context) {
+        runCatching { context.deleteFile(FILE_NAME) }
+    }
+
     fun format(throwable: Throwable): String {
         val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val sw = StringWriter()

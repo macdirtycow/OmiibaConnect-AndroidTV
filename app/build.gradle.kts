@@ -12,8 +12,8 @@ android {
         applicationId = "dev.omiiba.connect.tv"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "0.1.9-pre"
+        versionCode = 11
+        versionName = "0.1.10-pre"
     }
 
     buildTypes {

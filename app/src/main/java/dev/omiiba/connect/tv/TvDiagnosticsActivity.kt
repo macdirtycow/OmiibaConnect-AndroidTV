@@ -33,11 +33,6 @@ class TvDiagnosticsActivity : FragmentActivity() {
         runSelfTest()
     }
 
-    override fun onResume() {
-        super.onResume()
-        runSelfTest()
-    }
-
     private fun buildLayout(): ScrollView {
         val report = TextView(this).apply {
             textSize = 20f
@@ -63,6 +58,17 @@ class TvDiagnosticsActivity : FragmentActivity() {
             setOnClickListener { openMainApp() }
         }
 
+        val clearCrash = Button(this).apply {
+            text = getString(R.string.diagnostics_clear_crash)
+            textSize = 18f
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnClickListener {
+                CrashReporter.clear(this@TvDiagnosticsActivity)
+                runSelfTest()
+            }
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF101010.toInt())
@@ -76,6 +82,7 @@ class TvDiagnosticsActivity : FragmentActivity() {
                 ),
             )
             addView(grantBt, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(clearCrash, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(openMain, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
 
@@ -98,26 +105,33 @@ class TvDiagnosticsActivity : FragmentActivity() {
 
     private fun runSelfTest() {
         report.clear()
-        line("Omiiba Connect TV — diagnose")
-        line("Versie: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        line("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        line("ABI: ${Build.SUPPORTED_ABIS.joinToString()}")
-        line("")
-
-        line("Activity: OK (dit scherm werkt)")
-        testNative()
-        testBluetooth()
-        testLeanbackOnClasspath()
-
-        val last = CrashReporter.readLast(this)
-        if (last.isNotBlank()) {
+        try {
+            line("Omiiba Connect TV — diagnose")
+            line("Versie: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            line("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            line("ABI: ${Build.SUPPORTED_ABIS.joinToString()}")
             line("")
-            line("Laatste crash:")
-            line(last.trim().take(1200))
-        }
 
-        line("")
-        line(getString(R.string.diagnostics_hint))
+            line("Activity: OK (dit scherm werkt)")
+            testNative()
+            testBluetooth()
+            testLeanbackOnClasspath()
+
+            val last = CrashReporter.readLast(this)
+            if (last.isNotBlank()) {
+                line("")
+                line("Laatste crash:")
+                line(last.trim().take(1200))
+            }
+
+            line("")
+            line(getString(R.string.diagnostics_hint))
+        } catch (t: Throwable) {
+            CrashReporter.save(this, t)
+            line("")
+            line("Diagnose mislukt (app blijft open):")
+            line("${t.javaClass.simpleName}: ${t.message}")
+        }
         reportView.text = report.toString()
     }
 
@@ -133,7 +147,12 @@ class TvDiagnosticsActivity : FragmentActivity() {
 
     private fun testBluetooth() {
         line("Bluetooth rechten: ${BluetoothAccess.permissionSummary(this)}")
-        val scan = BluetoothAccess.findHeadphones(this)
+        val scan = try {
+            BluetoothAccess.findHeadphones(this)
+        } catch (t: Throwable) {
+            line("Bluetooth scan: MISLUKT — ${t.javaClass.simpleName}: ${t.message}")
+            return
+        }
         if (scan.error != null) {
             line("Bluetooth scan: ${scan.error}")
             if (!scan.permissionGranted) {
