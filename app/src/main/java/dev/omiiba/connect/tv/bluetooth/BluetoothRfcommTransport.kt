@@ -24,7 +24,7 @@ class BluetoothRfcommTransport(context: Context) {
     private var readThread: Thread? = null
     private val inbound = ArrayBlockingQueue<ByteArray>(32)
 
-    fun connect(mac: String) {
+    fun connect(mac: String, onProgress: ((String) -> Unit)? = null) {
         disconnect()
         val adapter = bluetoothAdapter()
             ?: throw IOException("Bluetooth not available on this device")
@@ -34,8 +34,15 @@ class BluetoothRfcommTransport(context: Context) {
         val uuid = UUID.fromString(SONY_MDR_UUID)
         val failures = mutableListOf<String>()
         val factories = buildSocketFactories(device, uuid)
+        val deadlineMs = System.currentTimeMillis() + RFCOMM_TOTAL_BUDGET_MS
 
-        for ((label, factory) in factories) {
+        for ((index, pair) in factories.withIndex()) {
+            val (label, factory) = pair
+            if (System.currentTimeMillis() >= deadlineMs) {
+                failures.add("budget: ${RFCOMM_TOTAL_BUDGET_MS / 1000}s verstreken")
+                break
+            }
+            onProgress?.invoke("RFCOMM ${index + 1}/${factories.size}: $label…")
             val sock = try {
                 factory()
             } catch (exc: Exception) {
@@ -181,8 +188,9 @@ class BluetoothRfcommTransport(context: Context) {
     companion object {
         private const val TAG = "OmiibaRfcomm"
         const val SONY_MDR_UUID = "96CC203E-5068-46ad-B32D-E316F5E069BA"
-        private const val PER_ATTEMPT_TIMEOUT_MS = 8_000L
-        private const val CHANNEL_SCAN_MAX = 12
+        private const val PER_ATTEMPT_TIMEOUT_MS = 5_000L
+        private const val RFCOMM_TOTAL_BUDGET_MS = 45_000L
+        private const val CHANNEL_SCAN_MAX = 8
         private const val POLL_TIMEOUT_MS = 5_000L
     }
 }

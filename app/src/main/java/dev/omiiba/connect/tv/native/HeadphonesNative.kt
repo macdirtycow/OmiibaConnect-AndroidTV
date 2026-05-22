@@ -26,6 +26,10 @@ object HeadphonesNative {
 
     external fun nativeBindTransport(transport: BluetoothRfcommTransport)
     external fun nativeConnect(deviceName: String, mac: String)
+
+    /** Call after [BluetoothRfcommTransport.connect] succeeded. */
+    external fun nativeFinishConnect(deviceName: String)
+
     external fun nativeDisconnect()
     external fun nativeIsConnected(): Boolean
     external fun nativePrepareForControl()

@@ -50,31 +50,45 @@ class HeadphonesRepository(app: Application) {
     }
 
     fun connect(device: BluetoothDevice) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
                 requireNative()
                 BluetoothAccess.rfcommRejectReason(device)?.let { reason ->
                     ConnectStatusStore.save(appContext, reason)
-                    _state.value = UiState.Error(reason)
+                    publish(UiState.Error(reason))
                     return@launch
                 }
                 val label = BluetoothAccess.safeName(device) ?: device.address
-                _state.value = UiState.Connecting
-                ConnectStatusStore.save(appContext, "Verbinden met $label…")
-                withTimeout(CONNECT_TIMEOUT_MS) {
-                    HeadphonesNative.nativeConnect(label, device.address)
-                    refreshState()
+                publish(UiState.Connecting)
+                ConnectStatusStore.save(appContext, "Start: $label (${device.address})")
+
+                transport.connect(device.address) { step ->
+                    ConnectStatusStore.save(appContext, step)
                 }
+                ConnectStatusStore.save(appContext, "RFCOMM OK — Sony handshake…")
+                HeadphonesNative.nativeFinishConnect(label)
+                refreshState()
                 startKeepalive()
                 val connected = requireState()
-                ConnectStatusStore.save(appContext, "Verbonden met ${connected.modelName}")
-                _state.value = UiState.Connected(connected)
+                ConnectStatusStore.save(appContext, "Verbonden: ${connected.modelName}")
+                publish(UiState.Connected(connected))
             } catch (exc: Throwable) {
+                runCatching { transport.disconnect() }
                 runCatching { HeadphonesNative.nativeDisconnect() }
-                val message = exc.message ?: exc.javaClass.simpleName
-                ConnectStatusStore.save(appContext, "Connect mislukt: $message")
-                _state.value = UiState.Error(message)
+                val message = when (exc) {
+                    is kotlinx.coroutines.TimeoutCancellationException ->
+                        "Timeout — koptelefoon reageerde niet op tijd"
+                    else -> exc.message ?: exc.javaClass.simpleName
+                }
+                ConnectStatusStore.save(appContext, "Mislukt: $message")
+                publish(UiState.Error(message))
             }
+        }
+    }
+
+    private suspend fun publish(state: UiState) {
+        withContext(Dispatchers.Main.immediate) {
+            _state.value = state
         }
     }
 
@@ -208,11 +222,7 @@ class HeadphonesRepository(app: Application) {
         }
     }
 
-    companion object {
-        /** RFCOMM + handshake budget (must exceed transport connect timeout). */
-        /** RFCOMM multi-attempt + MDR handshake. */
-        private const val CONNECT_TIMEOUT_MS = 60_000L
-    }
+    companion object
 
     sealed interface UiState {
         data object Disconnected : UiState

@@ -12,6 +12,10 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
+import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * First screen on TV — plain UI, no Leanback. Shows self-test results on screen.
@@ -20,6 +24,8 @@ class TvDiagnosticsActivity : FragmentActivity() {
 
     private lateinit var reportView: TextView
     private val report = StringBuilder()
+    private val scope = CoroutineScope(Dispatchers.Main)
+    private val rfcommProbe = BluetoothRfcommTransport(this)
 
     private val requestBluetooth = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -65,8 +71,17 @@ class TvDiagnosticsActivity : FragmentActivity() {
             isFocusableInTouchMode = true
             setOnClickListener {
                 CrashReporter.clear(this@TvDiagnosticsActivity)
+                ConnectStatusStore.clear(this@TvDiagnosticsActivity)
                 runSelfTest()
             }
+        }
+
+        val rfcommTest = Button(this).apply {
+            text = getString(R.string.diagnostics_rfcomm_test)
+            textSize = 18f
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnClickListener { runRfcommProbe() }
         }
 
         val root = LinearLayout(this).apply {
@@ -82,6 +97,7 @@ class TvDiagnosticsActivity : FragmentActivity() {
                 ),
             )
             addView(grantBt, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(rfcommTest, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(clearCrash, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             addView(openMain, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
@@ -201,6 +217,36 @@ class TvDiagnosticsActivity : FragmentActivity() {
             line("Leanback UI: OK")
         } catch (t: Throwable) {
             line("Leanback UI: MISLUKT — ${t.message}")
+        }
+    }
+
+    private fun runRfcommProbe() {
+        val scan = BluetoothAccess.findHeadphones(this)
+        val device = scan.sonyClassic.firstOrNull() ?: scan.preferredDevices.firstOrNull()
+        if (device == null) {
+            ConnectStatusStore.save(this, "RFCOMM-test: geen apparaat in lijst")
+            runSelfTest()
+            return
+        }
+        val label = BluetoothAccess.safeName(device) ?: device.address
+        scope.launch(Dispatchers.IO) {
+            try {
+                ConnectStatusStore.save(this@TvDiagnosticsActivity, "RFCOMM-test start: $label")
+                rfcommProbe.connect(device.address) { step ->
+                    ConnectStatusStore.save(this@TvDiagnosticsActivity, step)
+                }
+                rfcommProbe.disconnect()
+                ConnectStatusStore.save(
+                    this@TvDiagnosticsActivity,
+                    "RFCOMM-test OK — TV kan Sony MDR-kanaal openen",
+                )
+            } catch (t: Throwable) {
+                ConnectStatusStore.save(
+                    this@TvDiagnosticsActivity,
+                    "RFCOMM-test MISLUKT: ${t.message ?: t.javaClass.simpleName}",
+                )
+            }
+            runOnUiThread { runSelfTest() }
         }
     }
 

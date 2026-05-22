@@ -71,6 +71,30 @@ Java_dev_omiiba_connect_tv_native_HeadphonesNative_nativeConnect(
 	}
 }
 
+/** RFCOMM already open via Kotlin BluetoothRfcommTransport.connect — handshake only. */
+extern "C" JNIEXPORT void JNICALL
+Java_dev_omiiba_connect_tv_native_HeadphonesNative_nativeFinishConnect(
+	JNIEnv* env, jclass, jstring deviceName)
+{
+	try {
+		std::lock_guard guard(gSessionMtx);
+		if (!gBt) {
+			throw std::runtime_error("Transport not bound");
+		}
+		if (!gBt->isConnected()) {
+			throw std::runtime_error("RFCOMM not connected — open Bluetooth transport first");
+		}
+		gHeadphones = std::make_unique<Headphones>(*gBt);
+		const char* nameChars = env->GetStringUTFChars(deviceName, nullptr);
+		gHeadphones->configureForDevice(nameChars);
+		env->ReleaseStringUTFChars(deviceName, nameChars);
+		gHeadphones->performConnectHandshake();
+		gHeadphones->refreshFromDevice(true);
+	} catch (const std::exception& exc) {
+		throwToJava(env, exc);
+	}
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_dev_omiiba_connect_tv_native_HeadphonesNative_nativeDisconnect(JNIEnv*, jclass)
 {
