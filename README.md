@@ -1,66 +1,24 @@
 # Omiiba Connect for Android TV
 
+> **Gearchiveerd (mei 2026)** — Op de meeste Google TV / Philips-tv’s opent **RFCOMM niet** naar WH-1000XM3 (alleen TV-audio/A2DP werkt). Sony-bediening via deze app is op die hardware niet haalbaar. Gebruik **[Omiiba Connect voor macOS](https://github.com/macdirtycow/OmiibaConnect)** of Sony Sound Connect op je telefoon.
+
 Unofficial **Android TV** companion for Sony WH-1000XM3 / XM4 / XM5 / XM6. Uses the same reverse-engineered MDR protocol as [OmiibaConnect for macOS](https://github.com/macdirtycow/OmiibaConnect).
 
 **Not affiliated with Sony.**
 
-## Status
+## Laatste release
 
-Pre-release (`0.1.2-pre`). Requires a TV that supports **Bluetooth Classic RFCOMM** to the headphones. See [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
+Pre-release APK’s blijven op [GitHub Releases](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases) (tot **v0.1.15-pre**).
 
-## Features
+## Waarom gearchiveerd
 
-- Connect to paired Sony headphones
-- Ambient sound / ASM level / focus on voice
-- Virtual sound (surround + sound position)
-- Equalizer presets
-- Touch sensor & voice guidance (model-dependent)
-- Battery, codec, firmware readout
-- Background keepalive + `prepareForControl` (Mac 2.5.x behaviour)
+| Werkt | Werkt niet op typische TV |
+|-------|---------------------------|
+| Diagnose, permissies, UI | RFCOMM naar XM3 (`socket gesloten`) |
+| TV Bluetooth-audio (A2DP) | Zelfde bediening als Sound Connect |
 
-## Download
+Zie [docs/android-tv-sony-apk.md](docs/android-tv-sony-apk.md) — Sony telefoon-APK gebruikt voor XM3 ook **SPP/RFCOMM** (`96CC203E-…`), niet LE-GATT.
 
-Pre-release **release APK** (sideload): [GitHub Releases v0.1.2-pre](https://github.com/macdirtycow/OmiibaConnect-AndroidTV/releases/tag/v0.1.2-pre).
+## Broncode
 
-## Build
-
-```bash
-cd omiiba-connect-android-tv
-./gradlew :app:assembleRelease
-```
-
-APK: `app/build/outputs/apk/release/app-release.apk`
-
-Requires Android SDK 34 and NDK (CMake builds `core-native`).
-
-## Install on TV
-
-```bash
-adb install -r app/build/outputs/apk/release/app-release.apk
-```
-
-Pair headphones in system Bluetooth settings first.
-
-## RFCOMM spike (phase 0)
-
-```bash
-adb shell am start -a dev.omiiba.connect.tv.RFCOMM_SPIKE -n dev.omiiba.connect.tv/.RfcommSpikeActivity
-```
-
-## Protocol sync
-
-Portable C++ is copied from the Mac repo:
-
-```bash
-MAC_ROOT=../SonyXM3Mac ./scripts/sync-protocol-from-mac.sh
-```
-
-## Docs
-
-- [Bluetooth feasibility](docs/android-tv-bluetooth.md)
-- [Regression checklist](docs/regression-checklist-android-tv.md)
-- Mac [APK reference](https://github.com/macdirtycow/OmiibaConnect/blob/master/docs/apk-reference.md)
-
-## License
-
-MIT — see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+Historische documentatie: [docs/android-tv-bluetooth.md](docs/android-tv-bluetooth.md).
