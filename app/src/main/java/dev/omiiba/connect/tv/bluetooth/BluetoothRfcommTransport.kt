@@ -244,29 +244,17 @@ class BluetoothRfcommTransport(context: Context) {
         }
 
         fun formatConnectFailure(mac: String, failures: Collection<String>): String {
-            val unique = failures.toList().takeLast(6).distinct()
+            val unique = failures.toList().takeLast(8).distinct()
             val socketRefused = unique.any {
                 it.contains("socket gesloten", ignoreCase = true) ||
                     it.contains("read ret: -1", ignoreCase = true)
             }
             return buildString {
-                appendLine("RFCOMM mislukt ($mac).")
+                append("RFCOMM mislukt ($mac). ")
                 if (socketRefused) {
-                    appendLine()
-                    appendLine("De TV hoort audio (A2DP), maar Sony-bediening (RFCOMM) wordt geweigerd.")
-                    appendLine("Probeer dit:")
-                    appendLine("1. WH-1000XM3 uit → 5 sec → weer aan")
-                    appendLine("2. Ontkoppel XM3 op je telefoon (alleen TV + app)")
-                    appendLine("3. Wacht tot TV-audio werkt, open app opnieuw")
-                    appendLine("4. Druk Connect nogmaals (2e poging helpt soms)")
-                } else {
-                    appendLine("TV-audio kan werken zonder Omiiba-bediening.")
+                    append("TV-audio OK, Sony RFCOMM geweigerd. ")
                 }
-                if (unique.isNotEmpty()) {
-                    appendLine()
-                    append("Technisch: ")
-                    append(unique.joinToString(" | "))
-                }
+                append(unique.joinToString(" | "))
             }.trim()
         }
     }

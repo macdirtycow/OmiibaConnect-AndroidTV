@@ -11,6 +11,8 @@ import dev.omiiba.connect.tv.R
 data class BrowseRowItem(
     val label: String,
     val action: Any? = null,
+    /** Larger text for short error lines on TV. */
+    val prominent: Boolean = false,
 )
 
 class BrowseRowItemPresenter : Presenter() {
@@ -33,7 +35,9 @@ class BrowseRowItemPresenter : Presenter() {
 
     override fun onBindViewHolder(viewHolder: ViewHolder, item: Any?) {
         val row = item as BrowseRowItem
-        (viewHolder.view as TextView).text = row.label
+        val tv = viewHolder.view as TextView
+        tv.text = row.label
+        tv.textSize = if (row.prominent) 28f else 20f
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) {

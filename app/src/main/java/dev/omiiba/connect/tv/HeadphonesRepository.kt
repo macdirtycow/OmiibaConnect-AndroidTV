@@ -4,6 +4,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
 import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
+import dev.omiiba.connect.tv.bluetooth.ConnectErrorMessages
 import dev.omiiba.connect.tv.native.DeviceState
 import dev.omiiba.connect.tv.native.HeadphonesNative
 import kotlinx.coroutines.CoroutineScope
@@ -75,13 +76,8 @@ class HeadphonesRepository(app: Application) {
             } catch (exc: Throwable) {
                 runCatching { transport.disconnect() }
                 runCatching { HeadphonesNative.nativeDisconnect() }
-                val message = when (exc) {
-                    is kotlinx.coroutines.TimeoutCancellationException ->
-                        "Timeout — koptelefoon reageerde niet op tijd"
-                    else -> exc.message ?: exc.javaClass.simpleName
-                }
-                ConnectStatusStore.save(appContext, "Mislukt: $message")
-                publish(UiState.Error(message))
+                ConnectStatusStore.save(appContext, "Mislukt: ${ConnectErrorMessages.detail(exc)}")
+                publish(UiState.Error(ConnectErrorMessages.userSummary(exc)))
             }
         }
     }

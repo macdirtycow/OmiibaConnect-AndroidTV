@@ -3,7 +3,6 @@ package dev.omiiba.connect.tv
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.leanback.app.BrowseSupportFragment
@@ -15,6 +14,7 @@ import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.lifecycle.lifecycleScope
 import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
 import dev.omiiba.connect.tv.native.DeviceState
+import dev.omiiba.connect.tv.bluetooth.ConnectErrorMessages
 import dev.omiiba.connect.tv.ui.BrowseRowItem
 import dev.omiiba.connect.tv.ui.BrowseRowItemPresenter
 import kotlinx.coroutines.Job
@@ -103,10 +103,7 @@ class MainBrowseFragment : BrowseSupportFragment() {
                             buildConnectedRows(state.device)
                         }
                         is HeadphonesRepository.UiState.Error -> {
-                            if (isAdded) {
-                                Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
-                            }
-                            buildMessageRow(state.message)
+                            buildErrorRows(state.message)
                         }
                     }
                 } catch (t: Throwable) {
@@ -209,6 +206,22 @@ class MainBrowseFragment : BrowseSupportFragment() {
         rowsAdapter.clear()
         val row = itemRow()
         row.add(BrowseRowItem(message))
+        rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_status)), row))
+    }
+
+    private fun buildErrorRows(message: String) {
+        rowsAdapter.clear()
+        val row = itemRow()
+        val lines = if (message.contains('\n')) {
+            message.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        } else {
+            ConnectErrorMessages.userLines(Exception(message))
+        }
+        lines.forEachIndexed { index, line ->
+            row.add(BrowseRowItem(line, prominent = index == 0))
+        }
+        row.add(BrowseRowItem(getString(R.string.connect_error_retry)))
+        row.add(BrowseRowItem(ActionItem.Connect()))
         rowsAdapter.add(ListRow(HeaderItem(getString(R.string.row_status)), row))
     }
 

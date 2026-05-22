@@ -9,6 +9,7 @@
     <string name="row_equalizer">Equalizer</string>
     <string name="row_extra">More settings</string>
     <string name="status_connecting">Connecting…</string>
+    <string name="connect_error_retry">Opnieuw: kies Connect</string>
     <string name="status_model">Model: %1$s</string>
     <string name="status_battery">Battery: %1$s</string>
     <string name="status_codec">Codec: %1$s</string>
