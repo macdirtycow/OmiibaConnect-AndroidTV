@@ -244,7 +244,7 @@ class BluetoothRfcommTransport(context: Context) {
         }
 
         fun formatConnectFailure(mac: String, failures: Collection<String>): String {
-            val unique = failures.takeLast(6).distinct()
+            val unique = failures.toList().takeLast(6).distinct()
             val socketRefused = unique.any {
                 it.contains("socket gesloten", ignoreCase = true) ||
                     it.contains("read ret: -1", ignoreCase = true)
