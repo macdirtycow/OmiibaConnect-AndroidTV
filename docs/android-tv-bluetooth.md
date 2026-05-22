@@ -7,6 +7,7 @@ Omiiba Connect for Android TV uses the same **Sony MDR RFCOMM** service as the m
 | Service UUID | `96CC203E-5068-46ad-B32D-E316F5E069BA` |
 | First packet | `CONNECT_GET_PROTOCOL_INFO` `{ 0x00, 0x00 }` |
 | Reference | [OmiibaConnect Mac docs](https://github.com/macdirtycow/OmiibaConnect/blob/master/docs/apk-reference.md) |
+| Sony APK (9.5.0 decompile) | [android-tv-sony-apk.md](android-tv-sony-apk.md) — bevestigt SPP UUID + waarom LE op TV niet helpt |
 
 ## Phase 0: RFCOMM spike
 
