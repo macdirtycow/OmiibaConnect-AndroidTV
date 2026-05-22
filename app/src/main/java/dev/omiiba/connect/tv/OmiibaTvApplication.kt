@@ -7,6 +7,10 @@ class OmiibaTvApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        CrashReporter.install(this)
+        try {
+            CrashReporter.install(this)
+        } catch (_: Throwable) {
+            // Never block app launch if crash logging fails.
+        }
     }
 }

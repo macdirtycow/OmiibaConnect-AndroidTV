@@ -22,6 +22,7 @@
     <string name="diagnostics_grant_bluetooth">Bluetooth toestaan</string>
     <string name="diagnostics_open_main">Open Omiiba Connect (OK)</string>
     <string name="diagnostics_open_main_back">Terug naar diagnose</string>
+    <string name="diagnostics_loading">Omiiba Connect TV laden…</string>
     <string name="diagnostics_hint">Stap 1: Bluetooth toestaan. Stap 2: controleer of je XM3 hierboven staat. Stap 3: Open Omiiba Connect.</string>
     <string name="diagnostics_clear_crash">Crash-log wissen</string>
     <string name="diagnostics_rfcomm_test">RFCOMM-test (zonder hoofdapp)</string>

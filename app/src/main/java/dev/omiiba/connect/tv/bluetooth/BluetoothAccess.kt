@@ -156,11 +156,14 @@ object BluetoothAccess {
             val all = merged.values.toList()
             // Prefer A2DP-active Sony (audio already on TV) over stale bonded LE entry.
             val sony = all.filter { isSonyHeadphone(it) }
-                .sortedWith(
-                    compareByDescending<BluetoothDevice> { device ->
-                        !isLeOnlyAccessory(device)
-                    }.thenBy { safeName(it) ?: it.address },
-                )
+                .sortedWith { a, b ->
+                    val classicCmp = (!isLeOnlyAccessory(b)).compareTo(!isLeOnlyAccessory(a))
+                    if (classicCmp != 0) {
+                        classicCmp
+                    } else {
+                        (safeName(a) ?: a.address).compareTo(safeName(b) ?: b.address, ignoreCase = true)
+                    }
+                }
             val sonyClassic = sony.filter { isRfcommCandidate(it) }.sortedBy { safeName(it) ?: it.address }
             val sonyLeOnly = sony.filter { isLeOnlyAccessory(it) }.sortedBy { safeName(it) ?: it.address }
             val other = all.filter { !isSonyHeadphone(it) && isRfcommCandidate(it) }

@@ -9,23 +9,24 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.fragment.app.FragmentActivity
 import dev.omiiba.connect.tv.bluetooth.BluetoothAccess
 import dev.omiiba.connect.tv.bluetooth.BluetoothRfcommTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
  * First screen on TV — plain UI, no Leanback. Shows self-test results on screen.
  */
-class TvDiagnosticsActivity : FragmentActivity() {
+class TvDiagnosticsActivity : ComponentActivity() {
 
     private lateinit var reportView: TextView
     private val report = StringBuilder()
-    private val scope = CoroutineScope(Dispatchers.Main)
-    private val rfcommProbe = BluetoothRfcommTransport(this)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var rfcommProbe: BluetoothRfcommTransport? = null
 
     private val requestBluetooth = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -34,9 +35,37 @@ class TvDiagnosticsActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(buildLayout())
-        runSelfTest()
+        try {
+            super.onCreate(savedInstanceState)
+            rfcommProbe = BluetoothRfcommTransport(applicationContext)
+            setContentView(buildLayout())
+            reportView.text = getString(R.string.diagnostics_loading)
+            reportView.post { runSelfTest() }
+        } catch (t: Throwable) {
+            CrashReporter.save(applicationContext, t)
+            showBootstrapError(t)
+        }
+    }
+
+    private fun showBootstrapError(error: Throwable) {
+        val tv = TextView(this).apply {
+            textSize = 18f
+            typeface = Typeface.MONOSPACE
+            setTextColor(0xFFE0E0E0.toInt())
+            setPadding(48, 48, 48, 48)
+            text = buildString {
+                append("Omiiba Connect TV kon niet starten.\n\n")
+                append(error.javaClass.simpleName)
+                append(": ")
+                append(error.message ?: "(geen bericht)")
+                append("\n\nVerwijder de app volledig en installeer opnieuw.")
+            }
+        }
+        setContentView(
+            ScrollView(this).apply {
+                addView(tv)
+            },
+        )
     }
 
     private fun buildLayout(): ScrollView {
@@ -120,6 +149,9 @@ class TvDiagnosticsActivity : FragmentActivity() {
     }
 
     private fun runSelfTest() {
+        if (!::reportView.isInitialized) {
+            return
+        }
         report.clear()
         try {
             line("Omiiba Connect TV — diagnose")
@@ -221,6 +253,12 @@ class TvDiagnosticsActivity : FragmentActivity() {
     }
 
     private fun runRfcommProbe() {
+        val transport = rfcommProbe
+        if (transport == null) {
+            ConnectStatusStore.save(this, "RFCOMM-test: transport niet klaar")
+            runSelfTest()
+            return
+        }
         val scan = BluetoothAccess.findHeadphones(this)
         val device = scan.sonyClassic.firstOrNull() ?: scan.preferredDevices.firstOrNull()
         if (device == null) {
@@ -232,10 +270,10 @@ class TvDiagnosticsActivity : FragmentActivity() {
         scope.launch(Dispatchers.IO) {
             try {
                 ConnectStatusStore.save(this@TvDiagnosticsActivity, "RFCOMM-test start: $label")
-                rfcommProbe.connect(device.address) { step ->
+                transport.connect(device.address) { step ->
                     ConnectStatusStore.save(this@TvDiagnosticsActivity, step)
                 }
-                rfcommProbe.disconnect()
+                transport.disconnect()
                 ConnectStatusStore.save(
                     this@TvDiagnosticsActivity,
                     "RFCOMM-test OK — TV kan Sony MDR-kanaal openen",

@@ -87,7 +87,7 @@ class HeadphonesRepository(app: Application) {
     }
 
     private suspend fun publish(state: UiState) {
-        withContext(Dispatchers.Main.immediate) {
+        withContext(Dispatchers.Main) {
             _state.value = state
         }
     }
