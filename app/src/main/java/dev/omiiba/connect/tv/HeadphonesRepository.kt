@@ -62,7 +62,7 @@ class HeadphonesRepository(app: Application) {
                 publish(UiState.Connecting)
                 ConnectStatusStore.save(appContext, "Start: $label (${device.address})")
 
-                transport.connect(device.address) { step ->
+                transport.connect(device) { step ->
                     ConnectStatusStore.save(appContext, step)
                 }
                 ConnectStatusStore.save(appContext, "RFCOMM OK — Sony handshake…")

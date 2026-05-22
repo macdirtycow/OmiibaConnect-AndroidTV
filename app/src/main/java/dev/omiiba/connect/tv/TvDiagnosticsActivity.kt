@@ -270,7 +270,7 @@ class TvDiagnosticsActivity : ComponentActivity() {
         scope.launch(Dispatchers.IO) {
             try {
                 ConnectStatusStore.save(this@TvDiagnosticsActivity, "RFCOMM-test start: $label")
-                transport.connect(device.address) { step ->
+                transport.connect(device) { step ->
                     ConnectStatusStore.save(this@TvDiagnosticsActivity, step)
                 }
                 transport.disconnect()

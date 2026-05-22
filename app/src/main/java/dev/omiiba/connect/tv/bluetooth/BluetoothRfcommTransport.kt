@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import java.io.IOException
 import java.util.UUID
@@ -24,62 +25,85 @@ class BluetoothRfcommTransport(context: Context) {
     private var readThread: Thread? = null
     private val inbound = ArrayBlockingQueue<ByteArray>(32)
 
+    fun connect(device: BluetoothDevice, onProgress: ((String) -> Unit)? = null) {
+        connectInternal(device, device.address, onProgress)
+    }
+
     fun connect(mac: String, onProgress: ((String) -> Unit)? = null) {
+        val adapter = bluetoothAdapter()
+            ?: throw IOException("Bluetooth niet beschikbaar op dit apparaat")
+        connectInternal(adapter.getRemoteDevice(mac), mac, onProgress)
+    }
+
+    private fun connectInternal(
+        device: BluetoothDevice,
+        mac: String,
+        onProgress: ((String) -> Unit)?,
+    ) {
         disconnect()
         val adapter = bluetoothAdapter()
-            ?: throw IOException("Bluetooth not available on this device")
-        val device: BluetoothDevice = adapter.getRemoteDevice(mac)
+            ?: throw IOException("Bluetooth niet beschikbaar op dit apparaat")
         adapter.cancelDiscovery()
+        prepareDevice(device, onProgress)
 
-        val uuid = UUID.fromString(SONY_MDR_UUID)
-        val failures = mutableListOf<String>()
-        val factories = buildSocketFactories(device, uuid)
-        val deadlineMs = System.currentTimeMillis() + RFCOMM_TOTAL_BUDGET_MS
+        val failures = linkedSetOf<String>()
+        val factories = buildSocketFactories(device, UUID.fromString(SONY_MDR_UUID))
 
-        for ((index, pair) in factories.withIndex()) {
-            val (label, factory) = pair
-            if (System.currentTimeMillis() >= deadlineMs) {
-                failures.add("budget: ${RFCOMM_TOTAL_BUDGET_MS / 1000}s verstreken")
-                break
+        for (round in 1..CONNECT_ROUNDS) {
+            if (round > 1) {
+                onProgress?.invoke("RFCOMM opnieuw ($round/$CONNECT_ROUNDS)…")
+                Thread.sleep(BETWEEN_ROUNDS_MS)
             }
-            onProgress?.invoke("RFCOMM ${index + 1}/${factories.size}: $label…")
-            val sock = try {
-                factory()
-            } catch (exc: Exception) {
-                failures.add("$label: ${exc.message ?: exc.javaClass.simpleName}")
-                continue
-            }
-            try {
-                connectWithTimeout(sock, PER_ATTEMPT_TIMEOUT_MS)
-                if (sock.isConnected) {
-                    socket = sock
-                    connected.set(true)
-                    inbound.clear()
-                    readThread = Thread({ readLoop(sock) }, "omiiba-bt-read").also {
-                        it.isDaemon = true
-                        it.start()
-                    }
-                    Log.i(TAG, "RFCOMM connected via $label to $mac")
-                    return
+            val deadlineMs = System.currentTimeMillis() + RFCOMM_ROUND_BUDGET_MS
+            for ((index, pair) in factories.withIndex()) {
+                val (label, factory) = pair
+                if (System.currentTimeMillis() >= deadlineMs) {
+                    failures.add("tijd verstreken in ronde $round")
+                    break
                 }
-                failures.add("$label: socket not connected after connect()")
-            } catch (exc: IOException) {
-                failures.add("$label: ${exc.message ?: "connect failed"}")
-            } finally {
-                if (socket !== sock) {
-                    runCatching { sock.close() }
+                onProgress?.invoke("RFCOMM ${index + 1}/${factories.size} ($label)…")
+                val sock = try {
+                    factory()
+                } catch (exc: Exception) {
+                    failures.add(failureLabel(label, exc))
+                    continue
+                }
+                try {
+                    connectWithTimeout(sock, PER_ATTEMPT_TIMEOUT_MS)
+                    if (sock.isConnected) {
+                        socket = sock
+                        connected.set(true)
+                        inbound.clear()
+                        readThread = Thread({ readLoop(sock) }, "omiiba-bt-read").also {
+                            it.isDaemon = true
+                            it.start()
+                        }
+                        Log.i(TAG, "RFCOMM connected via $label to $mac")
+                        return
+                    }
+                    failures.add("$label: niet verbonden na connect()")
+                } catch (exc: IOException) {
+                    failures.add(failureLabel(label, exc))
+                } finally {
+                    if (socket !== sock) {
+                        runCatching { sock.close() }
+                    }
                 }
             }
         }
 
-        throw IOException(
-            buildString {
-                append("RFCOMM mislukt naar $mac. ")
-                append("TV-audio (A2DP) kan werken terwijl Sony-bediening (RFCOMM) niet opent op deze TV.\n")
-                append("Geprobeerd: ${factories.size} methodes.\n")
-                failures.takeLast(4).forEach { append("• $it\n") }
-            },
-        )
+        throw IOException(formatConnectFailure(mac, failures))
+    }
+
+    private fun prepareDevice(device: BluetoothDevice, onProgress: ((String) -> Unit)?) {
+        onProgress?.invoke("Bluetooth SDP voorbereiden…")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+                device.fetchUuidsWithSdp()
+            }
+        } catch (_: SecurityException) {
+        }
+        Thread.sleep(SDP_SETTLE_MS)
     }
 
     fun disconnect() {
@@ -118,7 +142,7 @@ class BluetoothRfcommTransport(context: Context) {
     }
 
     fun serviceTransport() {
-        // Read thread continuously feeds inbound; nothing extra required on Android.
+        // Read thread continuously feeds inbound.
     }
 
     private fun bluetoothAdapter(): BluetoothAdapter? {
@@ -133,14 +157,26 @@ class BluetoothRfcommTransport(context: Context) {
         val list = mutableListOf<Pair<String, () -> BluetoothSocket>>()
         list.add("insecure+uuid" to { device.createInsecureRfcommSocketToServiceRecord(uuid) })
         list.add("secure+uuid" to { device.createRfcommSocketToServiceRecord(uuid) })
-        for (channel in 1..CHANNEL_SCAN_MAX) {
+        for (channel in PREFERRED_CHANNELS) {
             val ch = channel
-            list.add("channel-$ch" to {
-                val method = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
-                method.invoke(device, ch) as BluetoothSocket
-            })
+            list.add("insecure-ch$ch" to { createInsecureRfcommChannel(device, ch) })
+            list.add("channel-$ch" to { createRfcommChannel(device, ch) })
         }
         return list
+    }
+
+    private fun createRfcommChannel(device: BluetoothDevice, channel: Int): BluetoothSocket {
+        val method = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+        return method.invoke(device, channel) as BluetoothSocket
+    }
+
+    private fun createInsecureRfcommChannel(device: BluetoothDevice, channel: Int): BluetoothSocket {
+        return try {
+            val method = device.javaClass.getMethod("createInsecureRfcommSocket", Int::class.javaPrimitiveType)
+            method.invoke(device, channel) as BluetoothSocket
+        } catch (_: NoSuchMethodException) {
+            createRfcommChannel(device, channel)
+        }
     }
 
     private fun connectWithTimeout(sock: BluetoothSocket, timeoutMs: Long) {
@@ -188,9 +224,50 @@ class BluetoothRfcommTransport(context: Context) {
     companion object {
         private const val TAG = "OmiibaRfcomm"
         const val SONY_MDR_UUID = "96CC203E-5068-46ad-B32D-E316F5E069BA"
-        private const val PER_ATTEMPT_TIMEOUT_MS = 5_000L
-        private const val RFCOMM_TOTAL_BUDGET_MS = 45_000L
-        private const val CHANNEL_SCAN_MAX = 8
+        private const val PER_ATTEMPT_TIMEOUT_MS = 6_000L
+        private const val RFCOMM_ROUND_BUDGET_MS = 50_000L
+        private const val BETWEEN_ROUNDS_MS = 2_500L
+        private const val SDP_SETTLE_MS = 1_500L
+        private const val CONNECT_ROUNDS = 2
+        private val PREFERRED_CHANNELS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8)
         private const val POLL_TIMEOUT_MS = 5_000L
+
+        fun failureLabel(label: String, exc: Throwable): String {
+            val msg = exc.message?.trim().orEmpty()
+            return when {
+                msg.contains("read ret: -1", ignoreCase = true) ||
+                    msg.contains("socket might closed", ignoreCase = true) ->
+                    "$label: socket gesloten (koptelefoon/TV weigerde RFCOMM)"
+                msg.isNotEmpty() -> "$label: $msg"
+                else -> "$label: ${exc.javaClass.simpleName}"
+            }
+        }
+
+        fun formatConnectFailure(mac: String, failures: Collection<String>): String {
+            val unique = failures.takeLast(6).distinct()
+            val socketRefused = unique.any {
+                it.contains("socket gesloten", ignoreCase = true) ||
+                    it.contains("read ret: -1", ignoreCase = true)
+            }
+            return buildString {
+                appendLine("RFCOMM mislukt ($mac).")
+                if (socketRefused) {
+                    appendLine()
+                    appendLine("De TV hoort audio (A2DP), maar Sony-bediening (RFCOMM) wordt geweigerd.")
+                    appendLine("Probeer dit:")
+                    appendLine("1. WH-1000XM3 uit → 5 sec → weer aan")
+                    appendLine("2. Ontkoppel XM3 op je telefoon (alleen TV + app)")
+                    appendLine("3. Wacht tot TV-audio werkt, open app opnieuw")
+                    appendLine("4. Druk Connect nogmaals (2e poging helpt soms)")
+                } else {
+                    appendLine("TV-audio kan werken zonder Omiiba-bediening.")
+                }
+                if (unique.isNotEmpty()) {
+                    appendLine()
+                    append("Technisch: ")
+                    append(unique.joinToString(" | "))
+                }
+            }.trim()
+        }
     }
 }
